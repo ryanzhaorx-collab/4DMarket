@@ -15,7 +15,7 @@ const head = buf.subarray(0, headEnd).toString('ascii');
 const count = Number(/element vertex (\d+)/.exec(head)?.[1] ?? 0);
 const props = [...head.matchAll(/property float (\w+)/g)].map((m) => m[1]);
 const stride = props.length * 4;
-const yi = props.indexOf('y');
+const yi = props.indexOf('z'); // 原始数据 Z-up：z 才是高度
 
 const buckets = { lower: [], mid: [], upper: [] };
 for (let i = 0; i < count; i++) {

@@ -37,9 +37,7 @@ export async function bootPc() {
 
   const engine = new PcEngine({
     canvas,
-    lower: '/models/HS_Bolimuqiang/split-lower.sog',
-    mid: '/models/HS_Bolimuqiang/split-mid.sog',
-    upper: '/models/HS_Bolimuqiang/split-upper.sog',
+    layers: [0, 1, 2, 3, 4, 5].map((i) => `/models/HS_Bolimuqiang/layer-${i}.sog`),
   });
 
   const sfx = new Sfx();
@@ -67,7 +65,6 @@ export async function bootPc() {
   const cx = (b.min[0] + b.max[0]) / 2;
   const cz = (b.min[2] + b.max[2]) / 2;
   const midY = 22;
-  const h = b.max[1] - b.min[1];
   const home = {
     target: [cx, midY, cz] as [number, number, number],
     distance: 460,
@@ -103,12 +100,45 @@ export async function bootPc() {
     card.classList.add('dim');
     hint.classList.add('hide');
     engine.controls.autoRotate = false;
-    engine.openSplit(h * 0.13, h * 0.1, 1100);
+
+    // ① 宏观锚定：楼体脱街景、悬浮、缓慢自转（暗场 + 拉远一点）
+    document.body.classList.add('godview');
+    engine.playTimeline(
+      [
+        { t: 0, target: [...engine.camera.target] as [number, number, number], distance: engine.camera.distance, yaw: engine.camera.yaw, pitch: engine.camera.pitch, fov: engine.camera.fov },
+        { t: 1.1, target: [cx, midY, cz], distance: 520, yaw: engine.camera.yaw + 0.32, pitch: 0.34, fov: 50, ease: 'inOutCubic' },
+      ],
+      () => {
+        engine.controls.autoRotate = true;
+      },
+    );
+
+    // ② 空间折叠：千层糕展开（1.1s 起，1.6s）
+    window.setTimeout(() => {
+      engine.controls.autoRotate = false;
+      engine.openUnfold(14, 1600, 3);
+      sfx.whoosh(0.8);
+      engine.playTimeline(
+        [
+          { t: 0, target: [cx, midY, cz], distance: 520, yaw: engine.camera.yaw, pitch: 0.34, fov: 50 },
+          { t: 2.0, target: [cx, midY, cz], distance: 430, yaw: engine.camera.yaw - 0.22, pitch: 0.26, fov: 52, ease: 'inOutCubic' },
+        ],
+      );
+    }, 1100);
+
+    // ③ 抽屉卡位：目标层抽出 + 震动 + 机械声
+    window.setTimeout(() => {
+      const yaw = engine.camera.yaw;
+      const dir: [number, number, number] = [Math.sin(yaw) * 0.9, 0.35, Math.cos(yaw) * 0.9];
+      engine.showRoom([cx, midY - 10, cz], dir, 70, 1400, 'outBack');
+      sfx.latch();
+      haptic(16);
+    }, 2700);
+
     engine.playTimeline(
       [
         { t: 0, target: [...engine.camera.target] as [number, number, number], distance: engine.camera.distance, yaw: engine.camera.yaw, pitch: engine.camera.pitch, fov: engine.camera.fov },
         { t: 1.0, target: [cx, midY + 8, cz], distance: 340, yaw: 0.55, pitch: 0.3, fov: 56, ease: 'outCubic' },
-        { t: 1.35, target: [cx, midY + 8, cz], distance: 340, yaw: 0.55, pitch: 0.3, fov: 56, ease: 'linear' },
       ],
       () => {
         const yaw = engine.camera.yaw;

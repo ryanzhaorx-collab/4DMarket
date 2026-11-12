@@ -14,9 +14,8 @@ import type { Vec3 } from '../math';
 
 export type PcEngineOptions = {
   canvas: HTMLCanvasElement;
-  lower: string;
-  mid: string;
-  upper: string;
+  /** 由下到上的楼层资产（.sog），用于「千层糕」分层展开 */
+  layers: string[];
 };
 
 const toVec = (v: Vec3) => new pc.Vec3(v[0], v[1], v[2]);
@@ -28,7 +27,7 @@ export class PcEngine {
 
   private camEntity: pc.Entity;
   private root: pc.Entity;
-  private entities: { lower?: pc.Entity; mid?: pc.Entity; upper?: pc.Entity } = {};
+  private layerEntities: pc.Entity[] = [];
   private roomEntity: pc.Entity | null = null;
   private roomAnim: { t0: number; dur: number; from: Vec3; to: Vec3; ease: string } | null = null;
   private roomPos: Vec3 = [0, 0, 0];
@@ -37,11 +36,14 @@ export class PcEngine {
   private timelineBase: { target: Vec3; distance: number; yaw: number; pitch: number; fov: number } | null = null;
   private timelinePlayingFlag = false;
 
-  private splitT = 0;
-  private splitTarget = 0;
-  private splitUp = 0;
-  private splitDown = 0;
-  private splitSpeed = 2.2;
+  /** 分层展开进度 0..1 */
+  private unfoldT = 0;
+  private unfoldTarget = 0;
+  private unfoldSpeed = 1.6;
+  /** 每层横向错开距离（米） */
+  unfoldSpread = 14;
+  /** 展开时被抽走的那层（索引） */
+  targetLayer = 3;
 
   private bounds: { min: Vec3; max: Vec3 } | null = null;
   private fps = 60;
@@ -97,15 +99,16 @@ export class PcEngine {
 
   private opts: PcEngineOptions;
 
-  private loadOne(key: 'lower' | 'mid' | 'upper', url: string): Promise<void> {
+  private loadLayer(index: number, url: string): Promise<void> {
     return new Promise<void>((resolve) => {
+      const key = `layer-${index}`;
       const asset = new pc.Asset(key, 'gsplat', { url });
       this.app.assets.add(asset);
       asset.on('load', () => {
         const e = new pc.Entity(key, this.app);
         e.addComponent('gsplat', { asset });
         this.root.addChild(e);
-        this.entities[key] = e;
+        this.layerEntities[index] = e;
         this.loaded++;
         resolve();
       });
@@ -119,12 +122,12 @@ export class PcEngine {
    * 之后在后台补中间层和上半部分——这是手机上「点开就能看」的关键。
    */
   async start(): Promise<void> {
-    await this.loadOne('lower', this.opts.lower);
+    const urls = this.opts.layers;
+    // 先加载「点数最多」的那层（通常是主体），再并行补其余
+    await this.loadLayer(0, urls[0]);
     this.onFirstPaint?.();
-    void Promise.all([
-      this.loadOne('mid', this.opts.mid),
-      this.loadOne('upper', this.opts.upper),
-    ]).then(() => this.onFullLoad?.());
+    const rest = urls.slice(1).map((u, i) => this.loadLayer(i + 1, u));
+    void Promise.all(rest).then(() => this.onFullLoad?.());
 
     this.bounds = {
       min: [-104, -70, -113],
@@ -188,16 +191,28 @@ export class PcEngine {
     return this.timelinePlayingFlag;
   }
 
+  /** 千层糕：各层沿水平方向错开，目标层再额外抽出来 */
+  openUnfold(spread = 14, duration = 1400, targetLayer = 3) {
+    this.unfoldSpread = spread;
+    this.targetLayer = targetLayer;
+    this.unfoldTarget = 1;
+    this.unfoldSpeed = 1000 / Math.max(duration, 1);
+  }
+
+  closeUnfold(duration = 800) {
+    this.unfoldTarget = 0;
+    this.unfoldSpeed = 1000 / Math.max(duration, 1);
+  }
+
+  /** 兼容旧接口 */
   openSplit(up: number, down: number, duration = 900) {
-    this.splitUp = up;
-    this.splitDown = down;
-    this.splitTarget = 1;
-    this.splitSpeed = 1000 / Math.max(duration, 1);
+    void up;
+    void down;
+    this.openUnfold(this.unfoldSpread, duration, this.targetLayer);
   }
 
   closeSplit(duration = 700) {
-    this.splitTarget = 0;
-    this.splitSpeed = 1000 / Math.max(duration, 1);
+    this.closeUnfold(duration);
   }
 
   openSlice(_cfg: unknown, _duration = 900) {}
@@ -321,13 +336,21 @@ export class PcEngine {
       if (raw >= 1) { this.resolve = null; this.root.setLocalScale(1, 1, 1); }
     }
 
-    const step = (this.splitTarget - this.splitT) * Math.min(1, dt * this.splitSpeed);
-    this.splitT += step;
-    const k = this.splitT;
-    this.entities.upper?.setPosition(0, 0, this.splitUp * k);
-    this.entities.lower?.setPosition(0, 0, -this.splitDown * k);
-    // 被抽走的那一层要消隐，否则它像桥一样把裂缝填住
-    if (this.entities.mid) this.entities.mid.enabled = k < 0.55;
+    // 千层糕展开：第 i 层横向偏移 (i - 中心) * spread * k
+    if (this.unfoldT !== this.unfoldTarget || this.unfoldT > 0) {
+      this.unfoldT += (this.unfoldTarget - this.unfoldT) * Math.min(1, dt * this.unfoldSpeed);
+      if (Math.abs(this.unfoldTarget - this.unfoldT) < 0.001) this.unfoldT = this.unfoldTarget;
+      const k = this.unfoldT;
+      const n = this.layerEntities.length;
+      const mid = (n - 1) / 2;
+      for (let i = 0; i < n; i++) {
+        const e = this.layerEntities[i];
+        if (!e) continue;
+        // 本地 X 就是世界 X（root 只绕 X 旋转），本地 Z 是世界 Y
+        const dx = (i - mid) * this.unfoldSpread * k;
+        e.setPosition(dx, 0, 0);
+      }
+    }
 
     if (this.roomAnim) {
       const raw = Math.min(1, (now - this.roomAnim.t0) / this.roomAnim.dur);

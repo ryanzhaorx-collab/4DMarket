@@ -7,9 +7,7 @@ const btn = document.getElementById('go') as HTMLButtonElement;
 
 const engine = new PcEngine({
   canvas,
-  lower: '/models/HS_Bolimuqiang/split-lower.compressed.ply',
-  mid: '/models/HS_Bolimuqiang/split-mid.compressed.ply',
-  upper: '/models/HS_Bolimuqiang/split-upper.compressed.ply',
+  layers: [0, 1, 2, 3, 4, 5].map((i) => `/models/HS_Bolimuqiang/layer-${i}.sog`),
 });
 
 void (async () => {

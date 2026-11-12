@@ -1541,3 +1541,13 @@ body.in-room .roompage::before {
     mix-blend-mode: overlay;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
 }
+
+/* ============ 第一步：宏观锚定（上帝视角） ============ */
+body.godview .grade {
+    background:
+      radial-gradient(120% 90% at 50% 45%, rgba(6, 9, 13, 0) 26%, rgba(6, 9, 13, 0.72) 100%),
+      radial-gradient(80% 60% at 50% 30%, rgba(255, 226, 170, 0.1), rgba(0, 0, 0, 0) 60%);
+    transition: background 0.9s ease;
+}
+body.godview .grid,
+body.godview .sidelabel { opacity: 0; transition: opacity 0.6s ease; }
