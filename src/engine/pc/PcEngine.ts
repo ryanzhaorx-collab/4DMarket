@@ -43,7 +43,7 @@ export class PcEngine {
   /** 每层纵向拉开距离（米）——爆炸图的主方向 */
   unfoldSpreadY = 62;
   /** 每层横向错位（米），让层次更清晰 */
-  unfoldSpreadX = 5;
+  unfoldSpreadX = 0;
   /** 展开时被抽走的那层（索引） */
   targetLayer = 3;
 
@@ -279,6 +279,7 @@ export class PcEngine {
     material.diffuseVertexColor = true;
     material.blendType = pc.BLEND_NORMAL;
     material.depthWrite = false;
+    material.opacity = 0.62;   // 玻璃感：能透出一点内部
     material.update();
 
     // 边缘发光：金色轮廓线（爆炸图里那一圈高亮）
@@ -294,11 +295,39 @@ export class PcEngine {
 
     const e = new pc.Entity('room', this.app);
     e.addComponent('render', { type: 'asset' });
+    // 暖光内景：一张床 + 两盏灯（让玻璃盒里「有东西」）
+    const inner = new MeshBuilder();
+    inner.box([-8, 0.1, -6], [8, 1.1, 2], [222, 214, 198]);        // 床
+    inner.box([-8.2, 1.1, 1.4], [8.2, 2.0, 2.2], [150, 120, 92]);  // 床头板
+    inner.box([-2, 2.2, -9], [2, 2.6, -8], [255, 224, 160]);       // 顶灯
+    inner.box([13, 1.0, -8], [14, 2.2, -7], [255, 210, 140]);      // 落地灯
+    const innerMesh = new pc.Mesh(this.app.graphicsDevice);
+    innerMesh.setPositions(new Float32Array(inner.pos));
+    innerMesh.setNormals(new Float32Array(inner.nrm));
+    const innerCols = new Float32Array((inner.pos.length / 3) * 4);
+    for (let i = 0; i < inner.pos.length / 3; i++) {
+      innerCols[i * 4] = inner.col[i * 4] / 255;
+      innerCols[i * 4 + 1] = inner.col[i * 4 + 1] / 255;
+      innerCols[i * 4 + 2] = inner.col[i * 4 + 2] / 255;
+      innerCols[i * 4 + 3] = 1;
+    }
+    innerMesh.setColors(innerCols as unknown as number[]);
+    innerMesh.setIndices(new Uint32Array(inner.idx));
+    innerMesh.update(pc.PRIMITIVE_TRIANGLES);
+    const innerMat = this.app.scene.defaultMaterial.clone();
+    innerMat.diffuse = new pc.Color(1, 1, 1);
+    innerMat.diffuseVertexColor = true;
+    innerMat.emissive = new pc.Color(0.5, 0.38, 0.2);
+    innerMat.emissiveIntensity = 0.8;
+    innerMat.update();
+
     const mi = new pc.MeshInstance(mesh, material);
     mi.castShadow = false;
     const miEdge = new pc.MeshInstance(mesh, edgeMat);
     miEdge.castShadow = false;
-    e.render!.meshInstances = [mi, miEdge];
+    const miInner = new pc.MeshInstance(innerMesh, innerMat);
+    miInner.castShadow = false;
+    e.render!.meshInstances = [miInner, mi, miEdge];
     e.setEulerAngles(-90, 0, 0);
     e.enabled = false;
     this.app.root.addChild(e);
@@ -362,9 +391,9 @@ export class PcEngine {
         const e = this.layerEntities[i];
         if (!e) continue;
         // 本地 Z = 世界 Y（高度），本地 X = 世界 X
+        // 每题：只沿高度（本地 Z）分开，保证是「上下分层」
         const dy = (i - mid) * this.unfoldSpreadY * k;
-        const dx = (i - mid) * this.unfoldSpreadX * k;
-        e.setPosition(dx, 0, dy);
+        e.setPosition(0, 0, dy);
       }
     }
 
