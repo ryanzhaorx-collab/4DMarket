@@ -1698,3 +1698,16 @@ body.in-room #scene { opacity: 1; }
 
 /* 面板展开时，隐藏顶部 HUD（头像/标题/返回），避免压住价格 */
 body.order-open .hud { opacity: 0; pointer-events: none; transition: opacity 0.28s ease; }
+
+
+/* 第二页：团队 SplatViewer 的独立画布 */
+.roomscene {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: none;
+    z-index: 15;
+    touch-action: none;
+}
+body.in-room .roomscene { display: block; }

@@ -6,6 +6,8 @@ import { PcEngine } from '../engine/pc/PcEngine';
 import { mountRoom, unmountRoom } from '../ui/room';
 import { Sfx, haptic } from '../ui/sfx';
 import { probe } from '../engine/pc/platform';
+// 团队提供的查看器（纯 JS，字段按 JSDoc 推断）
+import { SplatViewer } from '../engine/pc/viewer/splat-viewer.js';
 
 const $ = <T extends HTMLElement>(sel: string) => document.querySelector(sel) as T;
 
@@ -105,6 +107,7 @@ export async function bootPc() {
   let drawerOpen = false;
   let inRoom = false;
   let busy = false;
+  let roomViewer: SplatViewer | null = null;
 
   const openDrawer = () => {
     if (busy || inRoom) return;
@@ -185,7 +188,16 @@ export async function bootPc() {
     sfx.whoosh(0.7);
     window.setTimeout(() => {
       engine.hideRoom(0);
-      engine.enterRoomScene();
+      // 第二页换成团队的 SplatViewer（自带显影特效 + 手势 + 自动取景）
+      const rc = document.getElementById('roomScene') as HTMLCanvasElement;
+      if (rc && !roomViewer) {
+        const opts = {
+          pixelRatio: Math.min(window.devicePixelRatio || 1, cap.dprCap),
+          effect: 'develop',
+        };
+        roomViewer = new SplatViewer(rc, opts as never);
+        void roomViewer.load({ id: 'room', url: '/models/room.sog', name: '270° 海景房' });
+      }
       document.body.classList.add('in-room');
       document.getElementById('roombar')?.classList.add('show');
       mountRoom(engine as unknown as Parameters<typeof mountRoom>[0]);
@@ -211,6 +223,8 @@ export async function bootPc() {
     document.body.classList.remove('in-room');
     document.getElementById('roombar')?.classList.remove('show');
     unmountRoom();
+    roomViewer?.destroy();
+    roomViewer = null;
     document.getElementById('orderPanel')?.classList.remove('open');
     document.getElementById('detailPanel')?.classList.remove('open');
     document.getElementById('paypage')?.classList.remove('open');
