@@ -32,8 +32,15 @@ export class PcEngine {
   private root: pc.Entity;
   private layerEntities: pc.Entity[] = [];
   private develop: DevelopEffect[] = [];
+
+  /** 已挂上显影特效的层数（入场特效的启动条件） */
+  get developReadyCount(): number {
+    return this.develop.filter((d) => d.ready).length;
+  }
   private pendingDevelop: { e: pc.Entity; res: unknown }[] = [];
   private developWanted = 0;
+  private developDelay = 0;
+  private developStartAt = 0;
   private interiorEntity: pc.Entity | null = null;
   /** 室内扫描的朝向/缩放，先用参数试，定了再写死 */
   interiorRot: [number, number, number] = [-90, 0, 0];
@@ -225,9 +232,40 @@ export class PcEngine {
   }
 
   /** 「冲洗显影」入场：分界线自上而下扫过，点云显影成实体 */
-  playDevelop(duration = 1800) {
+  /**
+   * 播放入场显影。
+   * @param duration 扫过时长（毫秒），越大越慢
+   * @param delay    先停在「全暗点云」多久再开始扫（毫秒）——让用户先看清点云
+   */
+  playDevelop(duration = 3000, delay = 800) {
     this.developWanted = duration;
-    for (const d of this.develop) d.play({ duration });
+    this.developDelay = delay || 0;
+    this.developStartAt = performance.now() + this.developDelay;
+    if (!this.develop.length) return;   // 帧循环里会继续等
+  }
+
+  /**
+   * 帧循环里推进入场显影。
+   * 关键：材质刚编译完那几帧写入会被覆盖，所以「重试到真正开始动为止」，
+   * 而不是只调用一次 play。
+   */
+  private tickDevelop(now: number) {
+    if (!this.developWanted || !this.develop.length) return;
+
+    if (now < this.developStartAt) {
+      for (const d of this.develop) d.hold(0);   // 定格暗点云
+      return;
+    }
+
+    return;
+    // eslint-disable-next-line no-unreachable
+    const moved = this.develop.some((d) => d.playing && d.progress < 0.999);
+    if (moved) return;
+
+    // 超过 6s 还没动就不再重试（避免死循环）
+    if (now - this.developStartAt > 20000) return;
+
+    for (const d of this.develop) d.play({ duration: this.developWanted });
   }
 
   /** resolve 近似：整体从 0.88 放大到 1，配合镜头推进做「凝聚成形」 */
@@ -465,8 +503,8 @@ export class PcEngine {
           const d = new DevelopEffect(this.app, item.e as never, item.res as never, this.camEntity);
           if (d.ready) {
             this.develop.push(d);
-            // 晚加载到的层也要从头播一遍，否则会是「已显影」状态
-            if (this.developWanted > 0) d.play({ duration: this.developWanted });
+            // 直接开扫：挂载时机本身就是「这一层刚加载完」，天然就是入场
+            d.play({ duration: this.developWanted || 4200 });
           }
           else still.push(item);
         } catch {
@@ -477,6 +515,7 @@ export class PcEngine {
       this.pendingDevelop = still;
     }
 
+    this.tickDevelop(performance.now());
     for (const d of this.develop) d.update(dt);
 
     this.camera.update();

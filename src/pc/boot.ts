@@ -90,8 +90,9 @@ export async function bootPc() {
 
   // 入场：远景推进 + resolve 凝聚
   engine.applyCameraPose({ ...home, distance: 900, fov: 64 });
-  engine.startResolve(900);
-  engine.playDevelop(1900);
+  // 先出点云，再慢慢显影：等所有分层就绪再开始扫，避免各层各自起跑
+  // 入场显影：每层加载完自动开扫（时长在这里设定）
+  engine.playDevelop(4200, 0);
   document.getElementById('flash')?.classList.add('run');
   engine.playTimeline(
     [
