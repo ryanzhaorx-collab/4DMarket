@@ -38,7 +38,7 @@ export async function bootPc() {
   // 室内扫描的朝向/缩放可以用 URL 快速校准：?ir=-90,0,0&is=1
   const q = new URLSearchParams(location.search);
   const ir = (q.get('ir') ?? '-90,0,0').split(',').map(Number);
-  const iscale = Number(q.get('is') ?? '0.136');
+  const iscale = Number(q.get('is') ?? '1');
 
   const engine = new PcEngine({
     canvas,
@@ -47,6 +47,10 @@ export async function bootPc() {
   });
 
   engine.interiorRot = [ir[0] || 0, ir[1] || 0, ir[2] || 0];
+  const ro = (q.get('ro') ?? '0,0,0').split(',').map(Number);
+  engine.interiorOffset = [ro[0] || 0, ro[1] || 0, ro[2] || 0];
+  const rd = Number(q.get('rd'));
+  if (rd > 0) engine.roomDistance = rd;
   engine.interiorScale = iscale || 1;
 
   const sfx = new Sfx();

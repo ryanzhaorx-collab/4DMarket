@@ -33,7 +33,11 @@ export class PcEngine {
   private interiorEntity: pc.Entity | null = null;
   /** 室内扫描的朝向/缩放，先用参数试，定了再写死 */
   interiorRot: [number, number, number] = [-90, 0, 0];
-  interiorScale = 1;
+  interiorScale = 1;   // 缩放已烘进资产，这里保持 1
+  /** 扫描模型的中心偏移（标定用，单位与扫描一致） */
+  interiorOffset: [number, number, number] = [0, 0, 0];
+  /** 第二页室内机位距离（可 URL 覆盖，便于标定） */
+  roomDistance = 95;
   private roomEntity: pc.Entity | null = null;
   private roomAnim: { t0: number; dur: number; from: Vec3; to: Vec3; ease: string } | null = null;
   private roomOpacity = 0;
@@ -136,13 +140,19 @@ export class PcEngine {
     if (this.roomEntity) this.roomEntity.enabled = false;
     if (!this.interiorEntity) return;
     this.interiorEntity.enabled = true;
-    this.interiorEntity.setPosition(0, 0, 0);
+    // 扫描内容的中心不等于包围盒中心，用 offset 把它挪到世界原点
+    const sc = this.interiorScale;
+    this.interiorEntity.setPosition(
+      -this.interiorOffset[0] * sc,
+      -this.interiorOffset[1] * sc,
+      -this.interiorOffset[2] * sc,
+    );
     this.interiorEntity.setLocalEulerAngles(...this.interiorRot);
     this.interiorEntity.setLocalScale(this.interiorScale, this.interiorScale, this.interiorScale);
 
     // 相机对准房间中心
-    this.camera.target = [0, 1.4, 0];
-    this.camera.distance = 7;
+    this.camera.target = [0, 6, 0];
+    this.camera.distance = this.roomDistance;
     this.camera.yaw = 0.3;
     this.camera.pitch = 0.06;
     this.camera.fov = 58;
@@ -496,7 +506,8 @@ export class PcEngine {
     if (this.roomEntity && this.roomEntity.enabled) {
       this.roomEntity.setPosition(this.roomPos[0], this.roomPos[1], this.roomPos[2]);
     }
-    if (this.interiorEntity?.enabled) {
+    // 只有首页抽屉里才让室内跟随楼层；第二页室内模式由 enterRoomScene 固定在世界原点
+    if (this.interiorEntity?.enabled && !this.roomMode) {
       this.interiorEntity.setPosition(this.roomPos[0], this.roomPos[1], this.roomPos[2]);
     }
   }
