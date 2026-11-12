@@ -106,6 +106,16 @@ export async function bootPc() {
     const TOX = cx - 38;
     const TOZ = cz - 14;
     const TOY = midY + 8;
+    const yawNow = engine.camera.yaw;
+    const PUSH: [number, number, number] = [Math.sin(yawNow), 0, Math.cos(yawNow)];
+    const PUSH_DIST = 92;
+    const PLATE: [number, number, number] = [TOX, TOY, TOZ];
+    const at = (d: number): [number, number, number] => [
+      PLATE[0] + PUSH[0] * d,
+      PLATE[1],
+      PLATE[2] + PUSH[2] * d,
+    ];
+
     const cam0 = {
       target: [...engine.camera.target] as [number, number, number],
       distance: engine.camera.distance,
@@ -114,15 +124,18 @@ export async function bootPc() {
       fov: engine.camera.fov,
     };
 
-    // ① 宏观锚定（0–1.0s）：一个连续镜头，不再叠加第二条时间轴
+    // 唯一的镜头时间轴：所有目标点都由 PUSH / PLATE 推导，保证和盘子一致
+    const camA = { t: 1.0, target: [cx, midY + 14, cz] as [number, number, number], distance: 600, yaw: 0.95, pitch: 0.22, fov: 46 };
+    const camB = { t: 2.8, target: [cx, midY + 10, cz] as [number, number, number], distance: 590, yaw: 0.98, pitch: 0.2, fov: 46 };
+    const camC = { t: 4.0, target: at(20), distance: 520, yaw: 1.0, pitch: 0.18, fov: 44 };
+    const camD = { t: 6.2, target: at(PUSH_DIST), distance: 430, yaw: 1.0, pitch: 0.16, fov: 42 };
     engine.playTimeline(
       [
         { t: 0, ...cam0 },
-        { t: 1.0, target: [cx, midY + 14, cz], distance: 600, yaw: 0.95, pitch: 0.22, fov: 46, ease: 'inOutCubic' },
-        // ② 空间折叠（1.0–2.8s）：镜头几乎不动，只把楼拉开
-        { t: 2.8, target: [cx, midY + 10, cz], distance: 590, yaw: 0.98, pitch: 0.2, fov: 46, ease: 'inOutCubic' },
-        // ③ 卡位（2.8–3.9s）：镜头轻推到目标楼层
-        { t: 3.9, target: [TOX - 10, TOY - 18, TOZ], distance: 480, yaw: 1.0, pitch: 0.18, fov: 44, ease: 'inOutCubic' },
+        { ...camA, ease: 'inOutCubic' },
+        { ...camB, ease: 'inOutCubic' },
+        { ...camC, ease: 'inOutCubic' },
+        { ...camD, ease: 'inOutCubic' },
       ],
       () => {
         drawerOpen = true;
@@ -136,15 +149,17 @@ export async function bootPc() {
     engine.openUnfold(16, 1800, 3);
     sfx.whoosh(0.8);
 
-    // 卡位：目标层抽出（镜头同一时间推到它面前）
+    // ① 拆分完：玻璃层在原地渐显（不位移）
     window.setTimeout(() => {
-      const yaw = engine.camera.yaw;
-      // 按箭头方向：朝观众 + 略微向下抽出
-      const dir: [number, number, number] = [Math.sin(yaw) * 0.82, -0.34, Math.cos(yaw) * 0.82];
-      engine.showRoom([TOX, TOY + 6, TOZ], dir, 50, 1300, 'outBack');
+      engine.showRoom(PLATE, [0, 0, 0], 0, 700, 'linear');
+    }, 2500);
+
+    // ② 渐显后：沿 PUSH 朝镜头平推
+    window.setTimeout(() => {
+      engine.showRoom(PLATE, PUSH, PUSH_DIST, 2400, 'inOutCubic');
       sfx.latch();
       haptic(14);
-    }, 2750);
+    }, 3250);
   };
 
   const enterRoom = () => {
