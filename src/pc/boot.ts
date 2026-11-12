@@ -100,61 +100,50 @@ export async function bootPc() {
     card.classList.add('dim');
     hint.classList.add('hide');
     engine.controls.autoRotate = false;
-
-    // ① 宏观锚定：楼体脱街景、悬浮、缓慢自转（暗场 + 拉远一点）
     document.body.classList.add('godview');
+
+    // 目标楼层在「左塔」里：x 往左、z 往前的偏移，高度取中间那刀
+    const TOX = cx - 38;
+    const TOZ = cz - 14;
+    const TOY = midY + 8;
+    const cam0 = {
+      target: [...engine.camera.target] as [number, number, number],
+      distance: engine.camera.distance,
+      yaw: engine.camera.yaw,
+      pitch: engine.camera.pitch,
+      fov: engine.camera.fov,
+    };
+
+    // ① 宏观锚定（0–1.0s）：一个连续镜头，不再叠加第二条时间轴
     engine.playTimeline(
       [
-        { t: 0, target: [...engine.camera.target] as [number, number, number], distance: engine.camera.distance, yaw: engine.camera.yaw, pitch: engine.camera.pitch, fov: engine.camera.fov },
-        { t: 1.1, target: [cx, midY + 20, cz], distance: 620, yaw: 0.18, pitch: 0.14, fov: 46, ease: 'inOutCubic' },
+        { t: 0, ...cam0 },
+        { t: 1.0, target: [cx, midY + 14, cz], distance: 620, yaw: 0.42, pitch: 0.2, fov: 46, ease: 'inOutCubic' },
+        // ② 空间折叠（1.0–2.8s）：镜头几乎不动，只把楼拉开
+        { t: 2.8, target: [cx, midY + 14, cz], distance: 600, yaw: 0.46, pitch: 0.18, fov: 46, ease: 'inOutCubic' },
+        // ③ 卡位（2.8–3.9s）：镜头轻推到目标楼层
+        { t: 3.9, target: [TOX, TOY, TOZ], distance: 430, yaw: 0.5, pitch: 0.16, fov: 44, ease: 'inOutCubic' },
       ],
       () => {
-        engine.controls.autoRotate = true;
+        drawerOpen = true;
+        busy = false;
+        hint.textContent = '本月主推楼层已抽出 · 轻触进入房间';
+        hint.classList.remove('hide');
       },
     );
 
-    // ② 空间折叠：千层糕展开（1.1s 起，1.6s）
-    window.setTimeout(() => {
-      engine.controls.autoRotate = false;
-      engine.openUnfold(16, 1900, 3);
-      sfx.whoosh(0.8);
-      engine.playTimeline(
-        [
-          { t: 0, target: [cx, midY + 20, cz], distance: 620, yaw: 0.18, pitch: 0.14, fov: 46 },
-          { t: 2.0, target: [cx, midY + 10, cz], distance: 560, yaw: 0.22, pitch: 0.12, fov: 46, ease: 'inOutCubic' },
-        ],
-      );
-    }, 1100);
+    // 分层展开与镜头同步开始，不再用 setTimeout 另起一条时间轴
+    engine.openUnfold(16, 1800, 3);
+    sfx.whoosh(0.8);
 
-    // ③ 抽屉卡位：目标层抽出 + 震动 + 机械声
+    // 卡位：目标层抽出（镜头同一时间推到它面前）
     window.setTimeout(() => {
-      // 目标层（第 3 层）展开后在 midY + 37m 的位置：盒子就在原地，只沿视线方向轻推出来
       const yaw = engine.camera.yaw;
-      const dir: [number, number, number] = [Math.sin(yaw) * 0.55, 0.12, Math.cos(yaw) * 0.55];
-      engine.showRoom([cx, midY + 8, cz], dir, 20, 1400, 'outBack');
+      const dir: [number, number, number] = [Math.sin(yaw) * 0.5, 0.1, Math.cos(yaw) * 0.5];
+      engine.showRoom([TOX, TOY, TOZ], dir, 22, 1200, 'outBack');
       sfx.latch();
-      haptic(16);
-    }, 2700);
-
-    engine.playTimeline(
-      [
-        { t: 0, target: [...engine.camera.target] as [number, number, number], distance: engine.camera.distance, yaw: engine.camera.yaw, pitch: engine.camera.pitch, fov: engine.camera.fov },
-        { t: 1.0, target: [cx, midY + 8, cz], distance: 340, yaw: 0.55, pitch: 0.3, fov: 56, ease: 'outCubic' },
-      ],
-      () => {
-        const yaw = engine.camera.yaw;
-        const dir: [number, number, number] = [Math.sin(yaw) * 0.85, 0.55, Math.cos(yaw) * 0.85];
-        engine.showRoom([cx, midY - 24, cz], dir, 60, 1500, 'outBack');
-        window.setTimeout(() => {
-          drawerOpen = true;
-          busy = false;
-          sfx.latch();
-          haptic(14);
-          hint.textContent = '本月主推楼层已抽出 · 轻触进入房间';
-          hint.classList.remove('hide');
-        }, 1500);
-      },
-    );
+      haptic(14);
+    }, 2750);
   };
 
   const enterRoom = () => {
