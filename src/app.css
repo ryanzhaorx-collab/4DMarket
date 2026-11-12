@@ -1622,7 +1622,7 @@ body.godview .explode-hud { opacity: 1; }
 .ex-card {
     position: absolute;
     right: 48px;
-    bottom: 560px;
+    bottom: 700px;
     width: 470px;
     padding: 20px 24px;
     border-radius: 14px;

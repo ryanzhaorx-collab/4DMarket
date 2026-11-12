@@ -41,7 +41,7 @@ export class PcEngine {
   private unfoldTarget = 0;
   private unfoldSpeed = 1.6;
   /** 每层纵向拉开距离（米）——爆炸图的主方向 */
-  unfoldSpreadY = 26;
+  unfoldSpreadY = 62;
   /** 每层横向错位（米），让层次更清晰 */
   unfoldSpreadX = 5;
   /** 展开时被抽走的那层（索引） */

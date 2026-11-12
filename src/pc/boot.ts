@@ -116,7 +116,7 @@ export async function bootPc() {
     // ② 空间折叠：千层糕展开（1.1s 起，1.6s）
     window.setTimeout(() => {
       engine.controls.autoRotate = false;
-      engine.openUnfold(14, 1600, 3);
+      engine.openUnfold(62, 1700, 3);
       sfx.whoosh(0.8);
       engine.playTimeline(
         [
