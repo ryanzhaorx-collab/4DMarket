@@ -334,7 +334,7 @@ export class PcEngine {
     this.roomEntity = e;
   }
 
-  showRoom(anchor: Vec3, dir: Vec3, dist: number, duration = 1400, ease = 'outBack') {
+  showRoom(anchor: Vec3, dir: Vec3, dist: number, duration = 1400, ease = 'inOutCubic') {
     const e = this.ensureRoom();
     if (!e) return;
     e.enabled = true;
@@ -399,9 +399,21 @@ export class PcEngine {
 
     if (this.roomAnim) {
       const raw = Math.min(1, (now - this.roomAnim.t0) / this.roomAnim.dur);
+      // 缓动：inOutCubic 起步慢（像被缓缓推出来），outBack 只有末段回弹
       const e = this.roomAnim.ease === 'outBack'
         ? 1 + 2.70158 * Math.pow(raw - 1, 3) + 1.70158 * Math.pow(raw - 1, 2)
-        : 1 - Math.pow(1 - raw, 3);
+        : raw < 0.5
+          ? 4 * raw * raw * raw
+          : 1 - Math.pow(-2 * raw + 2, 3) / 2;
+      // 前 30% 淡入，避免「突然出现」
+      if (this.roomEntity?.render?.meshInstances?.length) {
+        const a = Math.min(1, raw / 0.3);
+        for (const mi of this.roomEntity.render.meshInstances) {
+          if (mi.material && 'opacity' in mi.material) {
+            (mi.material as pc.StandardMaterial).opacity = 0.62 * a;
+          }
+        }
+      }
       const { from, to } = this.roomAnim;
       this.roomPos = [
         from[0] + (to[0] - from[0]) * e,
