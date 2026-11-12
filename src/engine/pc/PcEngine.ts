@@ -30,6 +30,7 @@ export class PcEngine {
   private layerEntities: pc.Entity[] = [];
   private roomEntity: pc.Entity | null = null;
   private roomAnim: { t0: number; dur: number; from: Vec3; to: Vec3; ease: string } | null = null;
+  private roomOpacity = 0;
   private roomPos: Vec3 = [0, 0, 0];
 
   private timeline = new CameraTimeline();
@@ -343,7 +344,13 @@ export class PcEngine {
     this.roomAnim = { t0: performance.now(), dur: duration, from: [...anchor] as Vec3, to, ease };
   }
 
+  /** 原地渐显（不位移）：楼体拆分完之后先让玻璃层显出来 */
+  revealRoom(duration = 700) {
+    this.showRoom([this.roomPos[0], this.roomPos[1], this.roomPos[2]], [0, 0, 0], 0, duration, 'linear');
+  }
+
   hideRoom(_duration = 450) {
+    this.roomOpacity = 0;
     this.roomAnim = null;
     if (this.roomEntity) this.roomEntity.enabled = false;
   }
@@ -399,15 +406,30 @@ export class PcEngine {
 
     if (this.roomAnim) {
       const raw = Math.min(1, (now - this.roomAnim.t0) / this.roomAnim.dur);
-      const e = this.roomAnim.ease === 'outBack'
+      const ease = this.roomAnim.ease;
+      const e = ease === 'outBack'
         ? 1 + 2.70158 * Math.pow(raw - 1, 3) + 1.70158 * Math.pow(raw - 1, 2)
-        : 1 - Math.pow(1 - raw, 3);
+        : ease === 'inOutCubic'
+          ? (raw < 0.5 ? 4 * raw * raw * raw : 1 - Math.pow(-2 * raw + 2, 3) / 2)
+          : ease === 'linear'
+            ? raw
+            : 1 - Math.pow(1 - raw, 3);
       const { from, to } = this.roomAnim;
       this.roomPos = [
         from[0] + (to[0] - from[0]) * e,
         from[1] + (to[1] - from[1]) * e,
         from[2] + (to[2] - from[2]) * e,
       ];
+      // 渐显：前 30% 时间从 0 到满，之后保持不变（多次调用不会闪回）
+      const k2 = Math.min(1, raw / 0.3);
+      if (k2 > this.roomOpacity) {
+        this.roomOpacity = k2;
+        const list = this.roomEntity?.render?.meshInstances ?? [];
+        for (const mi of list) {
+          const mat = mi.material as pc.StandardMaterial;
+          if (mat && 'opacity' in mat) mat.opacity = 0.62 * this.roomOpacity;
+        }
+      }
       if (raw >= 1) this.roomAnim = null;
     }
     if (this.roomEntity && this.roomEntity.enabled) {

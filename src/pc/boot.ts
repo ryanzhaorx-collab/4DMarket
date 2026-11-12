@@ -141,7 +141,7 @@ export async function bootPc() {
       const yaw = engine.camera.yaw;
       // 按箭头方向：朝观众 + 略微向下抽出
       const dir: [number, number, number] = [Math.sin(yaw) * 0.82, -0.34, Math.cos(yaw) * 0.82];
-      engine.showRoom([TOX, TOY + 6, TOZ], dir, 78, 1300, 'outBack');
+      engine.showRoom([TOX, TOY + 6, TOZ], dir, 50, 1300, 'outBack');
       sfx.latch();
       haptic(14);
     }, 2750);
