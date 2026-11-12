@@ -77,7 +77,6 @@ export class PcEngine {
     });
     this.app.root.addChild(this.camEntity);
 
-    this.root.setEulerAngles(-90, 0, 0);
     this.app.root.addChild(this.root);
 
     const sun = new pc.Entity('sun', this.app);
@@ -109,6 +108,8 @@ export class PcEngine {
       asset.on('load', () => {
         const e = new pc.Entity(key, this.app);
         e.addComponent('gsplat', { asset });
+        // 每层自己把 Z-up 数据扶正；父节点不再旋转，位移直接用世界轴
+        e.setEulerAngles(-90, 0, 0);
         this.root.addChild(e);
         this.layerEntities[index] = e;
         this.loaded++;
@@ -390,9 +391,9 @@ export class PcEngine {
         const e = this.layerEntities[i];
         if (!e) continue;
         // 本地 Z = 世界 Y（高度），本地 X = 世界 X
-        // 每题：只沿高度（本地 Z）分开，保证是「上下分层」
+        // 只沿世界高度分开：父节点没有旋转，所以这里就是世界 Y
         const dy = (i - mid) * this.unfoldSpreadY * k;
-        e.setPosition(0, 0, dy);
+        e.setPosition(0, dy, 0);
       }
     }
 
