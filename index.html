@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <meta name="theme-color" content="#06080B" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <title>四维空间 · 东山岛悦华酒店</title>
+    <link rel="stylesheet" href="/src/app.css" />
+  </head>
+  <body>
+    <div id="stage" class="stage">
+      <canvas id="scene" class="scene"></canvas>
+      <div class="fog" id="fog" aria-hidden="true"></div>
+      <div class="flash" id="flash" aria-hidden="true"></div>
+
+      <div class="grade" aria-hidden="true"></div>
+      <div class="grid" aria-hidden="true"></div>
+
+      
+      <!-- ===== 第二页：室内漫游 ===== -->
+      <div class="roompage" id="roompage" aria-hidden="true">
+        <div class="roombg" id="roombg" aria-hidden="true"></div>
+        <div class="anchors" id="roomAnchors"></div>
+
+        <!-- 屏7 下单面板 -->
+        <div class="orderpanel" id="orderPanel">
+          <div class="order-grab" id="orderGrab"><i></i></div>
+          <div class="order-head">
+            <div class="order-title">270° 海景大床房</div>
+            <div class="order-price"><span>今日订金</span><b>¥299</b><i>抵 ¥600 房费</i></div>
+          </div>
+          <div class="order-specs">◆ 60㎡ · 落地窗 · 正东朝向 <em>日出 05:47 直射床尾</em></div>
+          <div class="order-tags">
+            <span class="on"># 海边逸火故事</span><span># 1987 老宅改造</span><span># 可点物体 26</span><span># 真实视频</span>
+          </div>
+          <div class="order-sub"><b>同空间可选房型</b><i>2 晚起订 · PMS 直连</i></div>
+          <div class="rc-scroll" id="rcScroll">
+            <div class="roomcard">
+              <div class="rc-badge">主推</div>
+              <div class="rc-thumb"></div>
+              <div class="rc-body">
+                <div class="rc-title">270° 海景大床房 <span>¥1,280<em>/晚</em></span></div>
+                <div class="rc-meta">60㎡ · 1.8m 大床 · 2 人</div>
+                <div class="rc-chips"><span>最像你刚看的房间</span><span>可订金房</span></div>
+                <div class="rc-foot">已售 62% · 今日剩 3 间 <button class="rc-buy">立即订购 ›</button></div>
+              </div>
+            </div>
+            <div class="roomcard">
+              <div class="rc-thumb alt"></div>
+              <div class="rc-body">
+                <div class="rc-title">海景双床房 <span>¥1,080<em>/晚</em></span></div>
+                <div class="rc-meta">52㎡ · 1.2m 双床 · 2 人</div>
+                <div class="rc-chips"><span>适合亲子</span><span>可订金房</span></div>
+                <div class="rc-foot">已售 48% · 今日剩 5 间 <button class="rc-buy">立即订购 ›</button></div>
+              </div>
+            </div>
+            <div class="roomcard">
+              <div class="rc-thumb alt2"></div>
+              <div class="rc-body">
+                <div class="rc-title">转角海景套房 <span>¥2,180<em>/晚</em></span></div>
+                <div class="rc-meta">86㎡ · 2.0m 大床 · 3 人</div>
+                <div class="rc-chips"><span>270° 转角窗</span><span>仅剩 1 间</span></div>
+                <div class="rc-foot">已售 87% · 今日剩 1 间 <button class="rc-buy">立即订购 ›</button></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 屏11 单体说明 -->
+        <div class="detail" id="detailPanel">
+          <div class="detail-grab"><i></i></div>
+          <div class="detail-head">
+            <span class="detail-tag">WINDOW · 窗景锚点</span>
+            <h3>东向落地窗 · 270°</h3>
+            <p>宽 3.2m × 高 2.7m · 可完全推开</p>
+          </div>
+          <div class="detail-cards">
+            <div><b>05:47</b><span>日出照射</span></div>
+            <div><b>南门湾</b><span>可见海域</span></div>
+            <div><b>18 秒</b><span>锚点视频</span></div>
+          </div>
+          <div class="detail-story">
+            <h4>窗的故事</h4>
+            <p>1987 年，房主把东墙敲开做成这扇窗。渔民夜里回港，灯一盏盏从海面浮起来，
+            当地人叫它「窗边渔火」。</p>
+            <div class="detail-narr">讲述人 · 房主二女儿</div>
+          </div>
+          <div class="detail-actions">
+            <button id="playVoice">▶ 听语音</button>
+            <button id="bookmark">☆ 书签</button>
+            <button id="prevObj">‹ 上一件</button>
+            <button id="nextObj">下一件 ›</button>
+          </div>
+        </div>
+
+        <div class="orderveil" id="orderVeil"></div>
+      </div>
+
+      <div class="hud" id="hud">
+        <button class="backbtn" id="backBtn" aria-label="返回">‹</button>
+        <div class="roombar" id="roombar">
+          <b>点亮东山 3 / 8</b><span>再点亮 5 个解锁岛藏</span>
+        </div>
+        <!-- 顶部品牌区 -->
+        <header class="brand">
+          <div class="en">FOUR-DIMENSION SPACE</div>
+          <div class="cnrow">
+            <h1 class="cn">四维空间</h1>
+            <span class="seal">四维</span>
+          </div>
+          <div class="meta">
+            <svg class="pin" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 2.6c3.2 0 5.6 2.5 5.6 5.8 0 4.2-4.3 8.6-5.2 9.5a.55.55 0 0 1-.8 0c-.9-.9-5.2-5.3-5.2-9.5C6.4 5.1 8.8 2.6 12 2.6Z" fill="url(#pg)" />
+              <circle cx="12" cy="8.3" r="2.1" fill="#0A0D10" />
+              <defs>
+                <linearGradient id="pg" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0" stop-color="#F6E5B8" /><stop offset="1" stop-color="#C79A3E" />
+                </linearGradient>
+              </defs>
+            </svg>
+            <span>福建 · 东山岛</span>
+            <span class="dot">·</span>
+            <span class="pill">实景 1:1 重建</span>
+          </div>
+        </header>
+
+        <!-- 云小圣智能体 -->
+        <div class="agent" id="agent">
+          <div class="orb">
+            <img src="assets/agent.png" alt="云小圣" draggable="false" />
+          </div>
+          <div class="agent-name">云小圣 智能体</div>
+        </div>
+
+        <!-- 跟随 3D 锚点的标注层 -->
+        <div class="anchors" id="anchors">
+          <div class="brackets" id="brackets"><i></i><i></i><i></i><i></i></div>
+          <div class="objtag" id="objtag">OBJ-001 · RECONSTRUCTED</div>
+          <button class="hotspot" id="hotspot" type="button">
+            <span class="hs-diamond"></span>
+            <span class="hs-text">悦华酒店 · 270° 海景</span>
+            <span class="hs-reticle"><i></i></span>
+          </button>
+        </div>
+
+        <div class="sidelabel" aria-hidden="true"><span>东山</span><i></i><span>ISLAND</span></div>
+        <div class="hint" id="hint">轻触穹顶 · 进入空间</div>
+
+        <!-- 地标卡 -->
+        <section class="card" id="card">
+          <div class="card-top">
+            <div class="card-titles">
+              <h2>悦华酒店 · 270°海景房</h2>
+              <p><span class="diamond"></span>铜陵镇 · 步行 6 分钟到南门湾</p>
+            </div>
+            <button class="enter" id="enterBtn" type="button"><span>进入</span><em>→</em></button>
+          </div>
+          <div class="card-divider"><i></i></div>
+          <div class="tags" id="cardTags">
+            <span>看海窗景</span><span>1987 老宅改造</span><span>深夜渔火</span>
+          </div>
+        </section>
+
+        <!-- 底部导航 -->
+        <nav class="tabbar" id="tabbar">
+          <button class="tab active" data-tab="explore" type="button">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="7.2" /><path d="m14.8 9.2-1.5 4.1-4.1 1.5 1.5-4.1Z" /></svg>
+            <span>探索</span>
+          </button>
+          <button class="scan" id="scanBtn" type="button">
+            <span class="scan-ring"></span>
+            <svg viewBox="0 0 24 24"><path d="M4 9V5.5A1.5 1.5 0 0 1 5.5 4H9M15 4h3.5A1.5 1.5 0 0 1 20 5.5V9M20 15v3.5a1.5 1.5 0 0 1-1.5 1.5H15M9 20H5.5A1.5 1.5 0 0 1 4 18.5V15" /></svg>
+            <span class="scan-label">扫描</span>
+          </button>
+          <button class="tab" data-tab="capsule" type="button">
+            <svg viewBox="0 0 24 24"><path d="M12 3.6 14.3 9l5.7.5-4.3 3.8 1.3 5.6-5-2.9-5 2.9 1.3-5.6L4 9.5 9.7 9Z" /></svg>
+            <span>时空胶囊</span>
+          </button>
+        </nav>
+
+        <div class="perf" id="perf" hidden></div>
+        <div class="dbgtag" id="dbgTag" hidden><i></i>DEBUG · <b id="dbgWhat"></b></div>
+        <div class="toast" id="toast"></div>
+
+      <!-- 首帧加载 -->
+      <div class="loader" id="loader">
+        <div class="loader-ring"><svg viewBox="0 0 120 120"><circle class="bg" cx="60" cy="60" r="52" /><circle class="fg" id="ringFg" cx="60" cy="60" r="52" /></svg><b id="loadPct">0<i>%</i></b></div>
+        <div class="loader-title">正在重建真实空间</div>
+        <div class="loader-sub" id="loadSub">3DGS · 实景 1:1 · 东山岛悦华酒店</div>
+      </div>
+
+      <!-- 房型浮层 -->
+      <div class="scrim" id="scrim"></div>
+      <section class="sheet" id="sheet" aria-hidden="true">
+        <div class="sheet-grab"></div>
+        <div class="sheet-head">
+          <div>
+            <h3>270° 海景大床房</h3>
+            <p class="sheet-sub">60㎡ · 落地窗 · 正东朝向</p>
+          </div>
+          <div class="price"><em>今日订金</em><b>¥299</b><s>抵 ¥600 房费</s></div>
+        </div>
+        <p class="sheet-line">日出 05:47 直射床尾 · 窗边即南门湾渔火位</p>
+        <div class="sheet-tags"><span>#窗边渔火故事</span><span>#1987老宅改造</span><span>#可点物体26</span><span>#真实视频</span></div>
+        <div class="roomcard">
+          <div class="roomcard-l">
+            <p class="rc-title">主推 · 270° 海景大床房</p>
+            <p class="rc-meta">60㎡ · 1.8m 大床 · 2人</p>
+            <p class="rc-stock">已售 62% · <b>今日剩 3 间</b></p>
+            <div class="rc-price">¥1,280<em>/晚</em></div>
+          </div>
+          <div class="roomcard-thumb"></div>
+        </div>
+        <button class="order" type="button">立即订购<em>2 晚起订 · PMS 直连</em></button>
+        <button class="sheet-close" id="sheetClose" type="button">回到空间</button>
+      </section>
+      </div>
+
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

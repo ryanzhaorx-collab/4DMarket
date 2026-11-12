@@ -1,0 +1,22 @@
+<!-- 启动过渡：先渲染原生骨架，再让位给 web-view（web-view 会覆盖整页，不能被覆盖） -->
+<view wx:if="{{stage === 'loading'}}" class="boot">
+  <view class="ring"></view>
+  <view class="title">正在进入真实空间</view>
+  <view class="sub">3DGS · 实景 1:1 · 东山岛悦华酒店</view>
+</view>
+
+<view wx:elif="{{stage === 'error'}}" class="boot">
+  <view class="err-title">空间暂时无法进入</view>
+  <view class="err-sub">{{errMsg}}</view>
+  <view class="tip">请确认网络正常，或在小程序后台配置业务域名</view>
+  <button class="btn" bindtap="retry">重试</button>
+  <button class="btn ghost" bindtap="copyLink">复制链接到浏览器打开</button>
+</view>
+
+<web-view
+  wx:else
+  src="{{url}}"
+  bindload="onWebLoad"
+  bindmessage="onMessage"
+  binderror="onWebError"
+></web-view>

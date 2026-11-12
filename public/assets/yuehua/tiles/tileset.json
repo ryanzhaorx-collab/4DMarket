@@ -1,0 +1,477 @@
+{
+  "asset": {
+    "version": "1.0",
+    "generator": "four-dimension-space/gen-scene"
+  },
+  "geometricError": 240,
+  "root": {
+    "boundingVolume": {
+      "box": [
+        0,
+        8,
+        0,
+        600,
+        0,
+        0,
+        0,
+        60,
+        0,
+        0,
+        0,
+        600
+      ]
+    },
+    "geometricError": 240,
+    "refine": "REPLACE",
+    "children": [
+      {
+        "boundingVolume": {
+          "box": [
+            -300,
+            6,
+            -300,
+            300,
+            0,
+            0,
+            0,
+            30,
+            0,
+            0,
+            0,
+            300
+          ]
+        },
+        "geometricError": 70,
+        "content": {
+          "uri": "q0_coarse.glb"
+        },
+        "children": [
+          {
+            "boundingVolume": {
+              "box": [
+                -450,
+                6,
+                -450,
+                150,
+                0,
+                0,
+                0,
+                24,
+                0,
+                0,
+                0,
+                150
+              ]
+            },
+            "geometricError": 18,
+            "content": {
+              "uri": "q0_00.glb"
+            }
+          },
+          {
+            "boundingVolume": {
+              "box": [
+                -150,
+                6,
+                -450,
+                150,
+                0,
+                0,
+                0,
+                24,
+                0,
+                0,
+                0,
+                150
+              ]
+            },
+            "geometricError": 18,
+            "content": {
+              "uri": "q0_10.glb"
+            }
+          },
+          {
+            "boundingVolume": {
+              "box": [
+                -450,
+                6,
+                -150,
+                150,
+                0,
+                0,
+                0,
+                24,
+                0,
+                0,
+                0,
+                150
+              ]
+            },
+            "geometricError": 18,
+            "content": {
+              "uri": "q0_01.glb"
+            }
+          },
+          {
+            "boundingVolume": {
+              "box": [
+                -150,
+                6,
+                -150,
+                150,
+                0,
+                0,
+                0,
+                24,
+                0,
+                0,
+                0,
+                150
+              ]
+            },
+            "geometricError": 18,
+            "content": {
+              "uri": "q0_11.glb"
+            }
+          }
+        ]
+      },
+      {
+        "boundingVolume": {
+          "box": [
+            300,
+            6,
+            -300,
+            300,
+            0,
+            0,
+            0,
+            30,
+            0,
+            0,
+            0,
+            300
+          ]
+        },
+        "geometricError": 70,
+        "content": {
+          "uri": "q1_coarse.glb"
+        },
+        "children": [
+          {
+            "boundingVolume": {
+              "box": [
+                150,
+                6,
+                -450,
+                150,
+                0,
+                0,
+                0,
+                24,
+                0,
+                0,
+                0,
+                150
+              ]
+            },
+            "geometricError": 18,
+            "content": {
+              "uri": "q1_00.glb"
+            }
+          },
+          {
+            "boundingVolume": {
+              "box": [
+                450,
+                6,
+                -450,
+                150,
+                0,
+                0,
+                0,
+                24,
+                0,
+                0,
+                0,
+                150
+              ]
+            },
+            "geometricError": 18,
+            "content": {
+              "uri": "q1_10.glb"
+            }
+          },
+          {
+            "boundingVolume": {
+              "box": [
+                150,
+                6,
+                -150,
+                150,
+                0,
+                0,
+                0,
+                24,
+                0,
+                0,
+                0,
+                150
+              ]
+            },
+            "geometricError": 18,
+            "content": {
+              "uri": "q1_01.glb"
+            }
+          },
+          {
+            "boundingVolume": {
+              "box": [
+                450,
+                6,
+                -150,
+                150,
+                0,
+                0,
+                0,
+                24,
+                0,
+                0,
+                0,
+                150
+              ]
+            },
+            "geometricError": 18,
+            "content": {
+              "uri": "q1_11.glb"
+            }
+          }
+        ]
+      },
+      {
+        "boundingVolume": {
+          "box": [
+            -300,
+            6,
+            300,
+            300,
+            0,
+            0,
+            0,
+            30,
+            0,
+            0,
+            0,
+            300
+          ]
+        },
+        "geometricError": 70,
+        "content": {
+          "uri": "q2_coarse.glb"
+        },
+        "children": [
+          {
+            "boundingVolume": {
+              "box": [
+                -450,
+                6,
+                150,
+                150,
+                0,
+                0,
+                0,
+                24,
+                0,
+                0,
+                0,
+                150
+              ]
+            },
+            "geometricError": 18,
+            "content": {
+              "uri": "q2_00.glb"
+            }
+          },
+          {
+            "boundingVolume": {
+              "box": [
+                -150,
+                6,
+                150,
+                150,
+                0,
+                0,
+                0,
+                24,
+                0,
+                0,
+                0,
+                150
+              ]
+            },
+            "geometricError": 18,
+            "content": {
+              "uri": "q2_10.glb"
+            }
+          },
+          {
+            "boundingVolume": {
+              "box": [
+                -450,
+                6,
+                450,
+                150,
+                0,
+                0,
+                0,
+                24,
+                0,
+                0,
+                0,
+                150
+              ]
+            },
+            "geometricError": 18,
+            "content": {
+              "uri": "q2_01.glb"
+            }
+          },
+          {
+            "boundingVolume": {
+              "box": [
+                -150,
+                6,
+                450,
+                150,
+                0,
+                0,
+                0,
+                24,
+                0,
+                0,
+                0,
+                150
+              ]
+            },
+            "geometricError": 18,
+            "content": {
+              "uri": "q2_11.glb"
+            }
+          }
+        ]
+      },
+      {
+        "boundingVolume": {
+          "box": [
+            300,
+            6,
+            300,
+            300,
+            0,
+            0,
+            0,
+            30,
+            0,
+            0,
+            0,
+            300
+          ]
+        },
+        "geometricError": 70,
+        "content": {
+          "uri": "q3_coarse.glb"
+        },
+        "children": [
+          {
+            "boundingVolume": {
+              "box": [
+                150,
+                6,
+                150,
+                150,
+                0,
+                0,
+                0,
+                24,
+                0,
+                0,
+                0,
+                150
+              ]
+            },
+            "geometricError": 18,
+            "content": {
+              "uri": "q3_00.glb"
+            }
+          },
+          {
+            "boundingVolume": {
+              "box": [
+                450,
+                6,
+                150,
+                150,
+                0,
+                0,
+                0,
+                24,
+                0,
+                0,
+                0,
+                150
+              ]
+            },
+            "geometricError": 18,
+            "content": {
+              "uri": "q3_10.glb"
+            }
+          },
+          {
+            "boundingVolume": {
+              "box": [
+                150,
+                6,
+                450,
+                150,
+                0,
+                0,
+                0,
+                24,
+                0,
+                0,
+                0,
+                150
+              ]
+            },
+            "geometricError": 18,
+            "content": {
+              "uri": "q3_01.glb"
+            }
+          },
+          {
+            "boundingVolume": {
+              "box": [
+                450,
+                6,
+                450,
+                150,
+                0,
+                0,
+                0,
+                24,
+                0,
+                0,
+                0,
+                150
+              ]
+            },
+            "geometricError": 18,
+            "content": {
+              "uri": "q3_11.glb"
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

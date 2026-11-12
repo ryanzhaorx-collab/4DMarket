@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+    <title>四维空间 · PlayCanvas</title>
+    <style>
+      html, body { margin: 0; height: 100%; background: #0b0e12; overflow: hidden; }
+      #pc { width: 100vw; height: 100vh; display: block; touch-action: none; }
+      #go {
+        position: fixed; left: 50%; bottom: 40px; transform: translateX(-50%);
+        z-index: 10; padding: 16px 40px; border-radius: 999px; border: 0;
+        background: linear-gradient(180deg,#f0d9a0,#d9b876); color: #2a2013;
+        font: 600 16px/1 -apple-system, sans-serif; letter-spacing: .1em;
+      }
+      #go:disabled { opacity: .5; }
+      #hud {
+        position: fixed; left: 16px; top: 16px; z-index: 10;
+        font: 12px/1.6 -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
+        color: rgba(240, 230, 210, 0.85); letter-spacing: 0.06em;
+        background: rgba(10, 13, 17, 0.6); padding: 10px 14px; border-radius: 10px;
+        border: 1px solid rgba(214, 178, 106, 0.25); white-space: pre;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="pc"></canvas>
+    <div id="hud">PlayCanvas · 加载中…</div>
+    <button id="go" disabled>进入</button>
+    <script type="module" src="/src/pc/main.ts"></script>
+  </body>
+</html>

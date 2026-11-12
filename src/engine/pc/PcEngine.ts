@@ -1,0 +1,361 @@
+/**
+ * PlayCanvas 版加载引擎（P1/P2）。
+ * - 复用自研的 OrbitCamera / OrbitControls / CameraTimeline（纯数学，与渲染无关）
+ * - 3DGS 用 PlayCanvas 的 gsplat 组件
+ * - 上下拆分 = 三块预切资产（lower / mid / upper）分别位移
+ * - 抽屉 = 程序化楼板 mesh（MeshBuilder）沿方向升起
+ */
+import * as pc from 'playcanvas';
+import { OrbitCamera } from '../Camera';
+import { OrbitControls } from '../OrbitControls';
+import { CameraTimeline, type CameraKey } from '../CameraTimeline';
+import { MeshBuilder } from '../VirtualRoom';
+import type { Vec3 } from '../math';
+
+export type PcEngineOptions = {
+  canvas: HTMLCanvasElement;
+  lower: string;
+  mid: string;
+  upper: string;
+};
+
+const toVec = (v: Vec3) => new pc.Vec3(v[0], v[1], v[2]);
+
+export class PcEngine {
+  readonly camera = new OrbitCamera();
+  readonly controls: OrbitControls;
+  readonly app: pc.Application;
+
+  private camEntity: pc.Entity;
+  private root: pc.Entity;
+  private entities: { lower?: pc.Entity; mid?: pc.Entity; upper?: pc.Entity } = {};
+  private roomEntity: pc.Entity | null = null;
+  private roomAnim: { t0: number; dur: number; from: Vec3; to: Vec3; ease: string } | null = null;
+  private roomPos: Vec3 = [0, 0, 0];
+
+  private timeline = new CameraTimeline();
+  private timelineBase: { target: Vec3; distance: number; yaw: number; pitch: number; fov: number } | null = null;
+  private timelinePlayingFlag = false;
+
+  private splitT = 0;
+  private splitTarget = 0;
+  private splitUp = 0;
+  private splitDown = 0;
+  private splitSpeed = 2.2;
+
+  private bounds: { min: Vec3; max: Vec3 } | null = null;
+  private fps = 60;
+  private last = performance.now();
+  private loaded = 0;
+  /** 首块（远景）就绪 */
+  onFirstPaint: (() => void) | null = null;
+  /** 全部就绪 */
+  onFullLoad: (() => void) | null = null;
+
+  constructor(opts: PcEngineOptions) {
+    this.opts = opts;
+    this.app = new pc.Application(opts.canvas, {
+      graphicsDeviceOptions: { antialias: false, alpha: false, powerPreference: 'high-performance' },
+    });
+    this.app.setCanvasFillMode(pc.FILLMODE_FILL_WINDOW);
+    this.app.setCanvasResolution(pc.RESOLUTION_AUTO);
+    // 手机 GPU 顶不住 3x 屏：按设备能力封顶像素比
+    const dpr = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--dpr')) || 2;
+    this.app.graphicsDevice.maxPixelRatio = Math.min(window.devicePixelRatio || 1, dpr);
+    this.app.start();
+
+    this.app.scene.ambientLight = new pc.Color(0.55, 0.6, 0.68);
+    this.root = new pc.Entity('splat-root', this.app);
+    this.camEntity = new pc.Entity('camera', this.app);
+    this.camEntity.addComponent('camera', {
+      fov: 52, nearClip: 0.4, farClip: 6000,
+      clearColor: new pc.Color(0.76, 0.82, 0.86),
+    });
+    this.app.root.addChild(this.camEntity);
+
+    this.root.setEulerAngles(-90, 0, 0);
+    this.app.root.addChild(this.root);
+
+    const sun = new pc.Entity('sun', this.app);
+    sun.addComponent('light', {
+      type: 'directional',
+      color: new pc.Color(1, 0.96, 0.9),
+      intensity: 1.1,
+      castShadows: false,
+    });
+    sun.setEulerAngles(38, 40, 0);
+    this.app.root.addChild(sun);
+
+    const fill = new pc.Entity('fill', this.app);
+    fill.addComponent('light', { type: 'omni', color: new pc.Color(0.7, 0.8, 1), intensity: 0.6, range: 4000 });
+    fill.setPosition(0, 200, 0);
+    this.app.root.addChild(fill);
+
+    this.controls = new OrbitControls(opts.canvas, this.camera);
+    this.app.on('update', () => this.onUpdate());
+  }
+
+  private opts: PcEngineOptions;
+
+  private loadOne(key: 'lower' | 'mid' | 'upper', url: string): Promise<void> {
+    return new Promise<void>((resolve) => {
+      const asset = new pc.Asset(key, 'gsplat', { url });
+      this.app.assets.add(asset);
+      asset.on('load', () => {
+        const e = new pc.Entity(key, this.app);
+        e.addComponent('gsplat', { asset });
+        this.root.addChild(e);
+        this.entities[key] = e;
+        this.loaded++;
+        resolve();
+      });
+      asset.on('error', () => resolve());
+      this.app.assets.load(asset);
+    });
+  }
+
+  /**
+   * 分级加载：先只加载下半部分（远景轮廓立刻可看），
+   * 之后在后台补中间层和上半部分——这是手机上「点开就能看」的关键。
+   */
+  async start(): Promise<void> {
+    await this.loadOne('lower', this.opts.lower);
+    this.onFirstPaint?.();
+    void Promise.all([
+      this.loadOne('mid', this.opts.mid),
+      this.loadOne('upper', this.opts.upper),
+    ]).then(() => this.onFullLoad?.());
+
+    this.bounds = {
+      min: [-104, -70, -113],
+      max: [119, 116, 110],
+    };
+    const b = this.bounds;
+    this.camera.target = [(b.min[0] + b.max[0]) / 2, (b.min[1] + b.max[1]) / 2, (b.min[2] + b.max[2]) / 2];
+    this.camera.distance = 460;
+    this.camera.yaw = 0.62;
+    this.camera.pitch = 0.38;
+    this.camera.fov = 52;
+  }
+
+  /** resolve 近似：整体从 0.88 放大到 1，配合镜头推进做「凝聚成形」 */
+  startResolve(duration = 1400) {
+    this.resolve = { t0: performance.now(), dur: duration };
+  }
+
+  private resolve: { t0: number; dur: number } | null = null;
+
+  /** 当前是否支持 WebGL2（PlayCanvas 必需） */
+  static supported(): boolean {
+    try {
+      const c = document.createElement('canvas');
+      return !!c.getContext('webgl2');
+    } catch {
+      return false;
+    }
+  }
+
+  contentBounds() {
+    return this.bounds;
+  }
+
+  applyCameraPose(p: { target: Vec3; distance: number; yaw: number; pitch: number; fov: number }) {
+    this.camera.target = [...p.target] as Vec3;
+    this.camera.distance = p.distance;
+    this.camera.yaw = p.yaw;
+    this.camera.pitch = p.pitch;
+    this.camera.fov = p.fov;
+  }
+
+  playTimeline(keys: CameraKey[], onDone?: () => void) {
+    this.timelineBase = {
+      target: [...this.camera.target] as Vec3,
+      distance: this.camera.distance,
+      yaw: this.camera.yaw,
+      pitch: this.camera.pitch,
+      fov: this.camera.fov,
+    };
+    this.timeline.play(keys, () => {
+      this.timelinePlayingFlag = false;
+      this.controls.enabled = true;
+      onDone?.();
+    });
+    this.timelinePlayingFlag = true;
+    this.controls.enabled = false;
+  }
+
+  get timelinePlaying() {
+    return this.timelinePlayingFlag;
+  }
+
+  openSplit(up: number, down: number, duration = 900) {
+    this.splitUp = up;
+    this.splitDown = down;
+    this.splitTarget = 1;
+    this.splitSpeed = 1000 / Math.max(duration, 1);
+  }
+
+  closeSplit(duration = 700) {
+    this.splitTarget = 0;
+    this.splitSpeed = 1000 / Math.max(duration, 1);
+  }
+
+  openSlice(_cfg: unknown, _duration = 900) {}
+  closeSlice(_duration = 600) {}
+  setBudgetOverride(_n: number) {}
+
+  private roomReady = false;
+
+  /** 首帧之后才创建 mesh / 材质：PlayCanvas 需要「当前 application」上下文 */
+  private initRoomLater() {
+    if (this.roomReady) return;
+    this.roomReady = true;
+    this.buildRoomMesh();
+  }
+
+  private ensureRoom() {
+    this.initRoomLater();
+    if (!this.roomEntity) return null;
+    return this.roomEntity;
+  }
+
+  private buildRoomMesh() {
+    const b = new MeshBuilder();
+    const W = 46, D = 21, H = 6;
+    b.box([-W - 1, -0.9, -D - 1], [W + 1, 0, D + 1], [40, 38, 34]);
+    b.box([-W, 0, -D], [W, 0.08, D], [26, 24, 21]);
+    const trim: [number, number, number][] = [
+      [-W - 0.5, W + 0.5, -D - 0.5, -D],
+      [-W - 0.5, W + 0.5, D, D + 0.5],
+      [-W - 0.5, -W, -D, D],
+      [W, W + 0.5, -D, D],
+    ].map((v) => [v[0], v[1], v[2]] as [number, number, number]);
+    void trim;
+    b.box([-W - 0.5, H - 0.24, -D - 0.5], [W + 0.5, H, -D], [214, 178, 106]);
+    b.box([-W - 0.5, H - 0.24, D], [W + 0.5, H, D + 0.5], [214, 178, 106]);
+    b.box([-W - 0.5, H - 0.24, -D], [-W, H, D], [214, 178, 106]);
+    b.box([W, H - 0.24, -D], [W + 0.5, H, D], [214, 178, 106]);
+    for (let i = -2; i <= 2; i++) {
+      for (let j = -1; j <= 1; j++) {
+        const px = i * (W / 2.6);
+        const pz = j * (D / 1.6);
+        b.box([px - 0.5, 0, pz - 0.5], [px + 0.5, H - 0.24, pz + 0.5], [58, 56, 52]);
+      }
+    }
+
+    const mesh = new pc.Mesh(this.app.graphicsDevice);
+    mesh.setPositions(new Float32Array(b.pos));
+    mesh.setNormals(new Float32Array(b.nrm));
+    const cols = new Float32Array((b.pos.length / 3) * 4);
+    for (let i = 0; i < b.pos.length / 3; i++) {
+      cols[i * 4] = b.col[i * 4] / 255;
+      cols[i * 4 + 1] = b.col[i * 4 + 1] / 255;
+      cols[i * 4 + 2] = b.col[i * 4 + 2] / 255;
+      cols[i * 4 + 3] = 1;
+    }
+    mesh.setColors(cols as unknown as number[]);
+    mesh.setIndices(new Uint32Array(b.idx));
+    mesh.update(pc.PRIMITIVE_TRIANGLES);
+
+    const material = this.app.scene.defaultMaterial.clone();
+    material.diffuse = new pc.Color(1, 1, 1);
+    material.diffuseVertexColor = true;
+    material.blendType = pc.BLEND_NORMAL;
+    material.depthWrite = false;
+    material.update();
+
+    const e = new pc.Entity('room', this.app);
+    e.addComponent('render', { type: 'asset' });
+    const mi = new pc.MeshInstance(mesh, material);
+    mi.castShadow = false;
+    e.render!.meshInstances = [mi];
+    e.setEulerAngles(-90, 0, 0);
+    e.enabled = false;
+    this.app.root.addChild(e);
+    this.roomEntity = e;
+  }
+
+  showRoom(anchor: Vec3, dir: Vec3, dist: number, duration = 1400, ease = 'outBack') {
+    const e = this.ensureRoom();
+    if (!e) return;
+    e.enabled = true;
+    const to: Vec3 = [anchor[0] + dir[0] * dist, anchor[1] + dir[1] * dist, anchor[2] + dir[2] * dist];
+    this.roomPos = [...anchor] as Vec3;
+    this.roomAnim = { t0: performance.now(), dur: duration, from: [...anchor] as Vec3, to, ease };
+  }
+
+  hideRoom(_duration = 450) {
+    this.roomAnim = null;
+    if (this.roomEntity) this.roomEntity.enabled = false;
+  }
+
+  private onUpdate() {
+    if (!this.roomReady) this.initRoomLater();
+    const now = performance.now();
+    const dt = Math.min((now - this.last) / 1000, 0.1);
+    this.last = now;
+    this.fps = this.fps * 0.92 + (1 / Math.max(dt, 0.001)) * 0.08;
+
+    if (this.timelinePlayingFlag && this.timelineBase) {
+      const { state } = this.timeline.update(now, this.timelineBase);
+      this.camera.target = [...state.target] as Vec3;
+      this.camera.distance = state.distance;
+      this.camera.yaw = state.yaw;
+      this.camera.pitch = state.pitch;
+      this.camera.fov = state.fov;
+    } else {
+      this.controls.update(dt);
+    }
+
+    this.camera.update();
+    this.camEntity.setPosition(this.camera.eye[0], this.camera.eye[1], this.camera.eye[2]);
+    this.camEntity.lookAt(toVec(this.camera.target));
+    this.camEntity.camera!.fov = this.camera.fov;
+
+    // resolve：整体缩放凝聚
+    if (this.resolve) {
+      const raw = Math.min(1, (now - this.resolve.t0) / this.resolve.dur);
+      const e = 1 - Math.pow(1 - raw, 3);
+      const k = 0.88 + 0.12 * e;
+      this.root.setLocalScale(k, k, k);
+      if (raw >= 1) { this.resolve = null; this.root.setLocalScale(1, 1, 1); }
+    }
+
+    const step = (this.splitTarget - this.splitT) * Math.min(1, dt * this.splitSpeed);
+    this.splitT += step;
+    const k = this.splitT;
+    this.entities.upper?.setPosition(0, 0, this.splitUp * k);
+    this.entities.lower?.setPosition(0, 0, -this.splitDown * k);
+    // 被抽走的那一层要消隐，否则它像桥一样把裂缝填住
+    if (this.entities.mid) this.entities.mid.enabled = k < 0.55;
+
+    if (this.roomAnim) {
+      const raw = Math.min(1, (now - this.roomAnim.t0) / this.roomAnim.dur);
+      const e = this.roomAnim.ease === 'outBack'
+        ? 1 + 2.70158 * Math.pow(raw - 1, 3) + 1.70158 * Math.pow(raw - 1, 2)
+        : 1 - Math.pow(1 - raw, 3);
+      const { from, to } = this.roomAnim;
+      this.roomPos = [
+        from[0] + (to[0] - from[0]) * e,
+        from[1] + (to[1] - from[1]) * e,
+        from[2] + (to[2] - from[2]) * e,
+      ];
+      if (raw >= 1) this.roomAnim = null;
+    }
+    if (this.roomEntity && this.roomEntity.enabled) {
+      this.roomEntity.setPosition(this.roomPos[0], this.roomPos[1], this.roomPos[2]);
+    }
+  }
+
+  get roomPose() {
+    return { pos: [...this.roomPos] as Vec3, yaw: 0 };
+  }
+
+  get stats() {
+    return { fps: Math.round(this.fps), tiles: this.loaded };
+  }
+
+  dispose() {
+    this.app.destroy();
+  }
+}
