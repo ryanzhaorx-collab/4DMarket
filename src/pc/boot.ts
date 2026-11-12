@@ -166,7 +166,6 @@ export async function bootPc() {
     // ② 渐显后：沿 PUSH 朝镜头平推
     window.setTimeout(() => {
       engine.showRoom(PLATE, PUSH, PUSH_DIST, 2400, 'inOutCubic');
-      engine.setInterior(true);
       sfx.latch();
       haptic(14);
     }, 3250);
@@ -182,6 +181,7 @@ export async function bootPc() {
     sfx.whoosh(0.7);
     window.setTimeout(() => {
       engine.hideRoom(0);
+      engine.enterRoomScene();
       document.body.classList.add('in-room');
       document.getElementById('roombar')?.classList.add('show');
       mountRoom(engine as unknown as Parameters<typeof mountRoom>[0]);
@@ -207,6 +207,7 @@ export async function bootPc() {
     document.body.classList.remove('in-room');
     document.getElementById('roombar')?.classList.remove('show');
     unmountRoom();
+    engine.exitRoomScene();
     engine.hideRoom(0);
     engine.closeSplit(700);
     card.classList.remove('dim');

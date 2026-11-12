@@ -239,13 +239,15 @@ function bindOrderPanel() {
   });
   grab.addEventListener('click', () => (panel.classList.contains('open') ? close() : open()));
   veil.addEventListener('click', close);
-  document.getElementById('buyBtn')?.addEventListener('click', () => {
-    const hint = document.getElementById('hint');
-    if (!hint) return;
-    const old = hint.textContent;
-    hint.textContent = '已锁定 3 间 · PMS 直连实时库存';
-    hint.classList.remove('hide');
-    window.setTimeout(() => { hint.textContent = old; }, 1800);
+  const pay = document.getElementById('paypage');
+  const openPay = () => pay?.classList.add('open');
+  document.getElementById('buyBtn')?.addEventListener('click', openPay);
+  document.querySelectorAll('.rc-buy').forEach((b) => b.addEventListener('click', openPay));
+  document.getElementById('payBack')?.addEventListener('click', () => pay?.classList.remove('open'));
+  document.getElementById('payNow')?.addEventListener('click', () => {
+    const btn = document.getElementById('payNow') as HTMLButtonElement;
+    btn.textContent = '支付中…';
+    window.setTimeout(() => { btn.textContent = '支付成功 ✓'; }, 1400);
   });
 }
 

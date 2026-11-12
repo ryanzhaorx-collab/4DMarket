@@ -1635,3 +1635,48 @@ body.godview .explode-hud { opacity: 1; }
 .ex-card b { display: block; font-size: 24px; color: #eaf6ff; letter-spacing: 0.04em; }
 .ex-card span { display: block; margin-top: 6px; font-size: 13px; letter-spacing: 0.22em; color: rgba(159, 224, 255, 0.6); }
 .ex-card em { display: block; margin-top: 8px; font-style: normal; font-size: 15px; color: #f0d9a0; letter-spacing: 0.1em; }
+
+
+/* ============ 第二页：真实室内三维 ============ */
+body.in-room .roombg { opacity: 0; transition: opacity 0.5s ease; pointer-events: none; }
+body.in-room #scene { opacity: 1; }
+
+/* 支付页（屏8） */
+.paypage {
+    position: absolute;
+    left: 0; right: 0; bottom: 0;
+    top: 0;
+    z-index: 90;
+    display: flex;
+    flex-direction: column;
+    padding: 90px 40px calc(60px + env(safe-area-inset-bottom, 0px));
+    background: linear-gradient(180deg, #0a0d11 0%, #070a0d 100%);
+    transform: translateY(100%);
+    transition: transform 0.42s cubic-bezier(0.22, 0.7, 0.25, 1);
+}
+.paypage.open { transform: translateY(0); }
+.paypage h2 { margin: 0; font-size: 44px; font-weight: 500; color: #f4ead2; letter-spacing: 0.04em; }
+.paypage .pay-sub { margin-top: 8px; font-size: 17px; letter-spacing: 0.2em; color: rgba(237, 230, 214, 0.45); }
+.payrows { margin-top: 34px; border-top: 1px solid rgba(214, 178, 106, 0.18); }
+.payrow {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 26px 0; border-bottom: 1px solid rgba(214, 178, 106, 0.14);
+    font-size: 21px; color: rgba(237, 230, 214, 0.8);
+}
+.payrow b { font-weight: 500; color: #f0d9a0; font-size: 23px; }
+.paytotal {
+    margin-top: auto; display: flex; justify-content: space-between; align-items: baseline;
+    padding: 30px 0 10px;
+}
+.paytotal span { font-size: 19px; letter-spacing: 0.16em; color: rgba(237, 230, 214, 0.55); }
+.paytotal b { font-size: 54px; font-weight: 500; color: #f0d9a0; }
+.paybtn {
+    margin-top: 22px; padding: 30px; border: 0; border-radius: 18px;
+    background: linear-gradient(180deg, #f0d9a0, #d9b876);
+    color: #2a2013; font-size: 26px; letter-spacing: 0.1em; cursor: pointer;
+}
+.payback {
+    position: absolute; left: 34px; top: 40px; width: 84px; height: 84px; border-radius: 50%;
+    border: 1px solid rgba(214, 178, 106, 0.3); background: rgba(10, 13, 17, 0.72);
+    color: #e8dcc0; font-size: 34px; display: grid; place-items: center; cursor: pointer;
+}

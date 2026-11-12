@@ -119,6 +119,7 @@ export class PcEngine {
       e.enabled = false;
       this.app.root.addChild(e);
       this.interiorEntity = e;
+      if (this.roomMode) e.enabled = true;
     });
     asset.on('error', (err: unknown) => console.warn('[pc] 室内资产加载失败', err));
     this.app.assets.load(asset);
@@ -128,6 +129,38 @@ export class PcEngine {
   setInterior(on: boolean) {
     if (this.interiorEntity) this.interiorEntity.enabled = on;
   }
+
+  /** 第二页：进入室内模式——隐藏整栋楼，只看房间，可自由环绕 */
+  enterRoomScene() {
+    for (const e of this.layerEntities) if (e) e.enabled = false;
+    if (this.roomEntity) this.roomEntity.enabled = false;
+    if (!this.interiorEntity) return;
+    this.interiorEntity.enabled = true;
+    this.interiorEntity.setPosition(0, 0, 0);
+    this.interiorEntity.setLocalEulerAngles(...this.interiorRot);
+    this.interiorEntity.setLocalScale(this.interiorScale, this.interiorScale, this.interiorScale);
+
+    // 相机对准房间中心
+    this.camera.target = [0, 1.4, 0];
+    this.camera.distance = 7;
+    this.camera.yaw = 0.3;
+    this.camera.pitch = 0.06;
+    this.camera.fov = 58;
+    this.controls.enabled = true;
+    this.controls.autoRotate = false;
+    // OrbitControls 有自己的 yaw/pitch 状态，改完相机必须同步回去，否则会被覆盖
+    (this.controls as unknown as { syncFromCamera?: () => void }).syncFromCamera?.();
+    this.roomMode = true;
+  }
+
+  /** 退出室内，恢复整栋楼 */
+  exitRoomScene() {
+    this.roomMode = false;
+    for (const e of this.layerEntities) if (e) e.enabled = true;
+    if (this.interiorEntity) this.interiorEntity.enabled = false;
+  }
+
+  private roomMode = false;
 
   private loadLayer(index: number, url: string): Promise<void> {
     return new Promise<void>((resolve) => {
