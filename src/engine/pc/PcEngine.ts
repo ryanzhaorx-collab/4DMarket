@@ -16,6 +16,8 @@ export type PcEngineOptions = {
   canvas: HTMLCanvasElement;
   /** 由下到上的楼层资产（.sog），用于「千层糕」分层展开 */
   layers: string[];
+  /** 真实室内扫描（.sog），放在被抽出的楼层里 */
+  roomUrl?: string;
 };
 
 const toVec = (v: Vec3) => new pc.Vec3(v[0], v[1], v[2]);
@@ -28,6 +30,10 @@ export class PcEngine {
   private camEntity: pc.Entity;
   private root: pc.Entity;
   private layerEntities: pc.Entity[] = [];
+  private interiorEntity: pc.Entity | null = null;
+  /** 室内扫描的朝向/缩放，先用参数试，定了再写死 */
+  interiorRot: [number, number, number] = [-90, 0, 0];
+  interiorScale = 1;
   private roomEntity: pc.Entity | null = null;
   private roomAnim: { t0: number; dur: number; from: Vec3; to: Vec3; ease: string } | null = null;
   private roomOpacity = 0;
@@ -101,6 +107,28 @@ export class PcEngine {
 
   private opts: PcEngineOptions;
 
+  /** 加载真实室内扫描，挂到楼层实体下面，跟着盘子一起动 */
+  private loadInterior(url: string) {
+    const asset = new pc.Asset('interior', 'gsplat', { url });
+    this.app.assets.add(asset);
+    asset.on('load', () => {
+      const e = new pc.Entity('interior', this.app);
+      e.addComponent('gsplat', { asset });
+      e.setLocalEulerAngles(...this.interiorRot);
+      e.setLocalScale(this.interiorScale, this.interiorScale, this.interiorScale);
+      e.enabled = false;
+      this.app.root.addChild(e);
+      this.interiorEntity = e;
+    });
+    asset.on('error', (err: unknown) => console.warn('[pc] 室内资产加载失败', err));
+    this.app.assets.load(asset);
+  }
+
+  /** 让室内扫描跟随楼层位置/可见性 */
+  setInterior(on: boolean) {
+    if (this.interiorEntity) this.interiorEntity.enabled = on;
+  }
+
   private loadLayer(index: number, url: string): Promise<void> {
     return new Promise<void>((resolve) => {
       const key = `layer-${index}`;
@@ -130,6 +158,7 @@ export class PcEngine {
     // 先加载「点数最多」的那层（通常是主体），再并行补其余
     await this.loadLayer(0, urls[0]);
     this.onFirstPaint?.();
+    if (this.opts.roomUrl) this.loadInterior(this.opts.roomUrl);
     const rest = urls.slice(1).map((u, i) => this.loadLayer(i + 1, u));
     void Promise.all(rest).then(() => this.onFullLoad?.());
 
@@ -327,7 +356,7 @@ export class PcEngine {
     miEdge.castShadow = false;
     const miInner = new pc.MeshInstance(innerMesh, innerMat);
     miInner.castShadow = false;
-    e.render!.meshInstances = [miInner, mi, miEdge];
+    e.render!.meshInstances = [miEdge];
     // 注意：MeshBuilder 的几何本身就是 Y-up（薄的方向是 Y），
     // 这里绝对不能再绕 X 转 -90°，否则楼板会立起来。
     e.enabled = false;
@@ -434,6 +463,9 @@ export class PcEngine {
     }
     if (this.roomEntity && this.roomEntity.enabled) {
       this.roomEntity.setPosition(this.roomPos[0], this.roomPos[1], this.roomPos[2]);
+    }
+    if (this.interiorEntity?.enabled) {
+      this.interiorEntity.setPosition(this.roomPos[0], this.roomPos[1], this.roomPos[2]);
     }
   }
 

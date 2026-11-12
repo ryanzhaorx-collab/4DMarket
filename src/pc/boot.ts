@@ -35,10 +35,19 @@ export async function bootPc() {
   const flash = $('#flash');
   const stage = $('#stage');
 
+  // 室内扫描的朝向/缩放可以用 URL 快速校准：?ir=-90,0,0&is=1
+  const q = new URLSearchParams(location.search);
+  const ir = (q.get('ir') ?? '-90,0,0').split(',').map(Number);
+  const iscale = Number(q.get('is') ?? '1');
+
   const engine = new PcEngine({
     canvas,
     layers: [0, 1, 2, 3, 4, 5].map((i) => `/models/HS_Bolimuqiang/layer-${i}.sog`),
+    roomUrl: '/models/room.sog',
   });
+
+  engine.interiorRot = [ir[0] || 0, ir[1] || 0, ir[2] || 0];
+  engine.interiorScale = iscale || 1;
 
   const sfx = new Sfx();
   const loader = document.getElementById('loader');
@@ -127,8 +136,8 @@ export async function bootPc() {
     // 唯一的镜头时间轴：所有目标点都由 PUSH / PLATE 推导，保证和盘子一致
     const camA = { t: 1.0, target: [cx, midY + 14, cz] as [number, number, number], distance: 600, yaw: 0.95, pitch: 0.22, fov: 46 };
     const camB = { t: 2.8, target: [cx, midY + 10, cz] as [number, number, number], distance: 590, yaw: 0.98, pitch: 0.2, fov: 46 };
-    const camC = { t: 4.0, target: at(20), distance: 520, yaw: 1.0, pitch: 0.18, fov: 44 };
-    const camD = { t: 6.2, target: at(PUSH_DIST), distance: 430, yaw: 1.0, pitch: 0.16, fov: 42 };
+    const camC = { t: 4.0, target: at(20), distance: 330, yaw: 1.0, pitch: 0.16, fov: 44 };
+    const camD = { t: 6.2, target: at(PUSH_DIST), distance: 72, yaw: 1.0, pitch: 0.12, fov: 42 };
     engine.playTimeline(
       [
         { t: 0, ...cam0 },
@@ -157,6 +166,7 @@ export async function bootPc() {
     // ② 渐显后：沿 PUSH 朝镜头平推
     window.setTimeout(() => {
       engine.showRoom(PLATE, PUSH, PUSH_DIST, 2400, 'inOutCubic');
+      engine.setInterior(true);
       sfx.latch();
       haptic(14);
     }, 3250);
