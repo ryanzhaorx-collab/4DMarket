@@ -38,7 +38,7 @@ export async function bootPc() {
   // 室内扫描的朝向/缩放可以用 URL 快速校准：?ir=-90,0,0&is=1
   const q = new URLSearchParams(location.search);
   const ir = (q.get('ir') ?? '-90,0,0').split(',').map(Number);
-  const iscale = Number(q.get('is') ?? '1');
+  const iscale = Number(q.get('is') ?? '0.136');
 
   const engine = new PcEngine({
     canvas,
@@ -136,8 +136,8 @@ export async function bootPc() {
     // 唯一的镜头时间轴：所有目标点都由 PUSH / PLATE 推导，保证和盘子一致
     const camA = { t: 1.0, target: [cx, midY + 14, cz] as [number, number, number], distance: 600, yaw: 0.95, pitch: 0.22, fov: 46 };
     const camB = { t: 2.8, target: [cx, midY + 10, cz] as [number, number, number], distance: 590, yaw: 0.98, pitch: 0.2, fov: 46 };
-    const camC = { t: 4.0, target: at(20), distance: 330, yaw: 1.0, pitch: 0.16, fov: 44 };
-    const camD = { t: 6.2, target: at(PUSH_DIST), distance: 72, yaw: 1.0, pitch: 0.12, fov: 42 };
+    const camC = { t: 4.0, target: at(20), distance: 300, yaw: 1.0, pitch: 0.16, fov: 44 };
+    const camD = { t: 6.2, target: at(PUSH_DIST), distance: 21, yaw: 1.0, pitch: 0.12, fov: 42 };
     engine.playTimeline(
       [
         { t: 0, ...cam0 },

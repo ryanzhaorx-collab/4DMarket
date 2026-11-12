@@ -269,7 +269,7 @@ export class PcEngine {
 
   private buildRoomMesh() {
     const b = new MeshBuilder();
-    const W = 20, D = 20, H = 6;   // 一层楼板：40 × 40 × 6m
+    const W = 3.5, D = 3, H = 3.2;   // 玻璃房间盒：7 × 6 × 3.2m
     b.box([-W - 1, -0.9, -D - 1], [W + 1, 0, D + 1], [40, 38, 34]);
     b.box([-W, 0, -D], [W, 0.08, D], [26, 24, 21]);
     const trim: [number, number, number][] = [
@@ -283,10 +283,9 @@ export class PcEngine {
     b.box([-W - 0.5, H - 0.24, D], [W + 0.5, H, D + 0.5], [214, 178, 106]);
     b.box([-W - 0.5, H - 0.24, -D], [-W, H, D], [214, 178, 106]);
     b.box([W, H - 0.24, -D], [W + 0.5, H, D], [214, 178, 106]);
-    for (let i = -1; i <= 1; i++) {
-      for (let j = -1; j <= 1; j++) {
-        b.box([i * 12 - 0.5, 0, j * 12 - 0.5], [i * 12 + 0.5, H - 0.24, j * 12 + 0.5], [58, 56, 52]);
-      }
+    // 四角立柱
+    for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
+      b.box([sx * W - 0.08, 0, sz * D - 0.08], [sx * W + 0.08, H, sz * D + 0.08], [214, 178, 106]);
     }
 
     const mesh = new pc.Mesh(this.app.graphicsDevice);
