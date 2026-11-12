@@ -207,6 +207,13 @@ export class PcEngine {
     this.unfoldSpeed = 1000 / Math.max(duration, 1);
   }
 
+  /** 把某一层（真实点云切片）水平抽出去——比另建一块板子更接近实拍效果 */
+  slideLayer(index: number, dir: Vec3, dist: number, duration = 2400) {
+    this.slide = { index, dir, dist, t0: performance.now(), dur: duration };
+  }
+
+  private slide: { index: number; dir: Vec3; dist: number; t0: number; dur: number } | null = null;
+
   /** 兼容旧接口 */
   openSplit(up: number, down: number, duration = 900) {
     void up;
@@ -393,7 +400,16 @@ export class PcEngine {
         // 本地 Z = 世界 Y（高度），本地 X = 世界 X
         // 只沿世界高度分开：父节点没有旋转，所以这里就是世界 Y
         const dy = (i - mid) * this.unfoldSpreadY * k;
-        e.setPosition(0, dy, 0);
+        // 被抽出的那一层：额外沿水平方向平移（缓动）
+        let ox = 0;
+        let oz = 0;
+        if (this.slide && this.slide.index === i) {
+          const raw = Math.min(1, (now - this.slide.t0) / this.slide.dur);
+          const e2 = raw < 0.5 ? 4 * raw * raw * raw : 1 - Math.pow(-2 * raw + 2, 3) / 2;
+          ox = this.slide.dir[0] * this.slide.dist * e2;
+          oz = this.slide.dir[2] * this.slide.dist * e2;
+        }
+        e.setPosition(ox, dy, oz);
       }
     }
 

@@ -140,9 +140,9 @@ export async function bootPc() {
     window.setTimeout(() => {
       const yaw = engine.camera.yaw;
       // 按箭头方向：朝观众 + 略微向下抽出
-      // 从楼里「缓缓推出」：起点就是楼层原位，2.4s，起步慢、末段轻收
-      const dir: [number, number, number] = [Math.sin(yaw) * 0.82, -0.34, Math.cos(yaw) * 0.82];
-      engine.showRoom([TOX, TOY, TOZ], dir, 78, 2400, 'inOutCubic');
+      // 抽出的就是「第 3 层真实点云」，沿屏幕右方向水平滑出
+      const dir: [number, number, number] = [Math.cos(yaw), 0, -Math.sin(yaw)];
+      engine.slideLayer(3, dir, 62, 2400);
       sfx.latch();
       haptic(14);
     }, 2750);
