@@ -40,8 +40,10 @@ export class PcEngine {
   private unfoldT = 0;
   private unfoldTarget = 0;
   private unfoldSpeed = 1.6;
-  /** 每层横向错开距离（米） */
-  unfoldSpread = 14;
+  /** 每层纵向拉开距离（米）——爆炸图的主方向 */
+  unfoldSpreadY = 26;
+  /** 每层横向错位（米），让层次更清晰 */
+  unfoldSpreadX = 5;
   /** 展开时被抽走的那层（索引） */
   targetLayer = 3;
 
@@ -192,8 +194,8 @@ export class PcEngine {
   }
 
   /** 千层糕：各层沿水平方向错开，目标层再额外抽出来 */
-  openUnfold(spread = 14, duration = 1400, targetLayer = 3) {
-    this.unfoldSpread = spread;
+  openUnfold(spread = 26, duration = 1400, targetLayer = 3) {
+    this.unfoldSpreadY = spread;
     this.targetLayer = targetLayer;
     this.unfoldTarget = 1;
     this.unfoldSpeed = 1000 / Math.max(duration, 1);
@@ -208,7 +210,7 @@ export class PcEngine {
   openSplit(up: number, down: number, duration = 900) {
     void up;
     void down;
-    this.openUnfold(this.unfoldSpread, duration, this.targetLayer);
+    this.openUnfold(this.unfoldSpreadY, duration, this.targetLayer);
   }
 
   closeSplit(duration = 700) {
@@ -279,11 +281,24 @@ export class PcEngine {
     material.depthWrite = false;
     material.update();
 
+    // 边缘发光：金色轮廓线（爆炸图里那一圈高亮）
+    const edgeMat = this.app.scene.defaultMaterial.clone();
+    edgeMat.diffuse = new pc.Color(1, 1, 1);
+    edgeMat.diffuseVertexColor = true;
+    edgeMat.emissive = new pc.Color(0.35, 0.75, 1);
+    edgeMat.emissiveIntensity = 0.9;
+    edgeMat.opacity = 0.16;
+    edgeMat.blendType = pc.BLEND_ADDITIVEALPHA;
+    edgeMat.depthWrite = false;
+    edgeMat.update();
+
     const e = new pc.Entity('room', this.app);
     e.addComponent('render', { type: 'asset' });
     const mi = new pc.MeshInstance(mesh, material);
     mi.castShadow = false;
-    e.render!.meshInstances = [mi];
+    const miEdge = new pc.MeshInstance(mesh, edgeMat);
+    miEdge.castShadow = false;
+    e.render!.meshInstances = [mi, miEdge];
     e.setEulerAngles(-90, 0, 0);
     e.enabled = false;
     this.app.root.addChild(e);
@@ -346,9 +361,10 @@ export class PcEngine {
       for (let i = 0; i < n; i++) {
         const e = this.layerEntities[i];
         if (!e) continue;
-        // 本地 X 就是世界 X（root 只绕 X 旋转），本地 Z 是世界 Y
-        const dx = (i - mid) * this.unfoldSpread * k;
-        e.setPosition(dx, 0, 0);
+        // 本地 Z = 世界 Y（高度），本地 X = 世界 X
+        const dy = (i - mid) * this.unfoldSpreadY * k;
+        const dx = (i - mid) * this.unfoldSpreadX * k;
+        e.setPosition(dx, 0, dy);
       }
     }
 

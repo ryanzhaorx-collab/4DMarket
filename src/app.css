@@ -1551,3 +1551,87 @@ body.godview .grade {
 }
 body.godview .grid,
 body.godview .sidelabel { opacity: 0; transition: opacity 0.6s ease; }
+
+/* ============ 爆炸图标注层（第一步/第二步显示） ============ */
+.explode-hud {
+    position: absolute;
+    left: 50%;
+    top: 0;
+    width: 885px;
+    height: calc(100vh / var(--s));
+    transform: translateX(-50%) scale(var(--s));
+    transform-origin: top center;
+    z-index: 25;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.6s ease;
+}
+body.godview .explode-hud { opacity: 1; }
+
+.fl-line {
+    position: absolute;
+    right: 150px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.fl-line i {
+    width: 150px;
+    height: 1px;
+    background: linear-gradient(90deg, rgba(120, 210, 255, 0) 0%, rgba(120, 210, 255, 0.85) 100%);
+}
+.fl-line b {
+    font: 500 22px/1 -apple-system, sans-serif;
+    letter-spacing: 0.12em;
+    color: #8fd8ff;
+    text-shadow: 0 0 12px rgba(120, 210, 255, 0.8);
+}
+.fl-line.l1 { top: 27%; }
+.fl-line.l2 { top: 34%; }
+.fl-line.l3 { top: 43%; }
+.ex-tag { top: 33%; }
+
+.ex-lock {
+    position: absolute;
+    right: 96px;
+    top: 46%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 14px 18px;
+    border-radius: 14px;
+    border: 1px solid rgba(120, 210, 255, 0.5);
+    background: rgba(8, 20, 30, 0.55);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+}
+.ex-lock span { font-size: 22px; }
+.ex-lock em { font-style: normal; font-size: 24px; color: #9fe0ff; letter-spacing: 0.06em; }
+.ex-lock i { font-style: normal; font-size: 13px; letter-spacing: 0.3em; color: rgba(159, 224, 255, 0.6); }
+
+.ex-tag {
+    position: absolute;
+    right: 110px;
+    top: 38%;
+    text-align: right;
+}
+.ex-tag b { display: block; font-size: 30px; color: #eaf6ff; letter-spacing: 0.04em; }
+.ex-tag i { font-style: normal; font-size: 13px; letter-spacing: 0.28em; color: rgba(159, 224, 255, 0.65); }
+
+.ex-card {
+    position: absolute;
+    right: 48px;
+    bottom: 560px;
+    width: 470px;
+    padding: 20px 24px;
+    border-radius: 14px;
+    border: 1px solid rgba(120, 210, 255, 0.35);
+    background: rgba(6, 14, 22, 0.72);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    text-align: left;
+}
+.ex-card b { display: block; font-size: 24px; color: #eaf6ff; letter-spacing: 0.04em; }
+.ex-card span { display: block; margin-top: 6px; font-size: 13px; letter-spacing: 0.22em; color: rgba(159, 224, 255, 0.6); }
+.ex-card em { display: block; margin-top: 8px; font-style: normal; font-size: 15px; color: #f0d9a0; letter-spacing: 0.1em; }
