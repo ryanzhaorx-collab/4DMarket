@@ -211,6 +211,11 @@ export async function bootPc() {
     document.body.classList.remove('in-room');
     document.getElementById('roombar')?.classList.remove('show');
     unmountRoom();
+    document.getElementById('orderPanel')?.classList.remove('open');
+    document.getElementById('detailPanel')?.classList.remove('open');
+    document.getElementById('paypage')?.classList.remove('open');
+    document.getElementById('orderVeil')?.classList.remove('show');
+    document.body.classList.remove('order-open');
     engine.exitRoomScene();
     engine.hideRoom(0);
     engine.closeSplit(700);

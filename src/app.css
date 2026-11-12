@@ -1194,7 +1194,11 @@ body.in-room .backbtn { opacity: 1; pointer-events: auto; }
     pointer-events: none;
     transition: opacity 0.45s ease;
 }
-body.in-room .roompage { opacity: 1; pointer-events: auto; }
+body.in-room .roompage { opacity: 1; pointer-events: none; }
+body.in-room .roompage .orderpanel,
+body.in-room .roompage .detail,
+body.in-room .roompage .paypage,
+body.in-room .roompage .backbtn { pointer-events: auto; }
 
 /* --- 实景底图（照片级） --- */
 .roombg {
@@ -1215,7 +1219,8 @@ body.in-room .roompage { opacity: 1; pointer-events: auto; }
 }
 
 /* --- 热点 --- */
-.anchors { position: absolute; inset: 0; }
+.anchors { position: absolute; inset: 0; pointer-events: none; }
+.rspot { pointer-events: auto; }
 .rspot {
     position: absolute;
     transform: translate(-50%, -50%);
@@ -1680,3 +1685,8 @@ body.in-room #scene { opacity: 1; }
     border: 1px solid rgba(214, 178, 106, 0.3); background: rgba(10, 13, 17, 0.72);
     color: #e8dcc0; font-size: 34px; display: grid; place-items: center; cursor: pointer;
 }
+
+
+/* 遮罩只做视觉，不拦截手势，也不响应点击关闭 */
+.orderveil { pointer-events: none !important; }
+.orderveil.show { pointer-events: none !important; }

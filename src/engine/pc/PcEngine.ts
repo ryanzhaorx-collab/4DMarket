@@ -37,7 +37,7 @@ export class PcEngine {
   /** 扫描模型的中心偏移（标定用，单位与扫描一致） */
   interiorOffset: [number, number, number] = [0, 0, 0];
   /** 第二页室内机位距离（可 URL 覆盖，便于标定） */
-  roomDistance = 95;
+  roomDistance = 2.2;   // 站在房间中心（室内视角）
   private roomEntity: pc.Entity | null = null;
   private roomAnim: { t0: number; dur: number; from: Vec3; to: Vec3; ease: string } | null = null;
   private roomOpacity = 0;
@@ -151,7 +151,7 @@ export class PcEngine {
     this.interiorEntity.setLocalScale(this.interiorScale, this.interiorScale, this.interiorScale);
 
     // 相机对准房间中心
-    this.camera.target = [0, 6, 0];
+    this.camera.target = [0, 1.2, 0];
     this.camera.distance = this.roomDistance;
     this.camera.yaw = 0.3;
     this.camera.pitch = 0.06;

@@ -238,7 +238,6 @@ function bindOrderPanel() {
     else if (e.clientY - y0 > 40) close();
   });
   grab.addEventListener('click', () => (panel.classList.contains('open') ? close() : open()));
-  veil.addEventListener('click', close);
   const pay = document.getElementById('paypage');
   const openPay = () => pay?.classList.add('open');
   document.getElementById('buyBtn')?.addEventListener('click', openPay);
