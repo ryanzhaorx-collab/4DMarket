@@ -90,7 +90,8 @@ export async function bootPc() {
 
   // 入场：远景推进 + resolve 凝聚
   engine.applyCameraPose({ ...home, distance: 900, fov: 64 });
-  engine.startResolve(1500);
+  engine.startResolve(900);
+  engine.playDevelop(1900);
   document.getElementById('flash')?.classList.add('run');
   engine.playTimeline(
     [

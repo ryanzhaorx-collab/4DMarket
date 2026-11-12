@@ -33,6 +33,7 @@ export class PcEngine {
   private layerEntities: pc.Entity[] = [];
   private develop: DevelopEffect[] = [];
   private pendingDevelop: { e: pc.Entity; res: unknown }[] = [];
+  private developWanted = 0;
   private interiorEntity: pc.Entity | null = null;
   /** 室内扫描的朝向/缩放，先用参数试，定了再写死 */
   interiorRot: [number, number, number] = [-90, 0, 0];
@@ -182,7 +183,7 @@ export class PcEngine {
       this.app.assets.add(asset);
       asset.on('load', () => {
         const e = new pc.Entity(key, this.app);
-        e.addComponent('gsplat', { asset });
+        e.addComponent('gsplat', { asset, unified: false });   // unified:false 才拿得到 splat 材质，特效要用
         // 每层自己把 Z-up 数据扶正；父节点不再旋转，位移直接用世界轴
         e.setEulerAngles(-90, 0, 0);
         this.root.addChild(e);
@@ -225,6 +226,7 @@ export class PcEngine {
 
   /** 「冲洗显影」入场：分界线自上而下扫过，点云显影成实体 */
   playDevelop(duration = 1800) {
+    this.developWanted = duration;
     for (const d of this.develop) d.play({ duration });
   }
 
@@ -461,7 +463,11 @@ export class PcEngine {
       for (const item of this.pendingDevelop) {
         try {
           const d = new DevelopEffect(this.app, item.e as never, item.res as never, this.camEntity);
-          if (d.ready) this.develop.push(d);
+          if (d.ready) {
+            this.develop.push(d);
+            // 晚加载到的层也要从头播一遍，否则会是「已显影」状态
+            if (this.developWanted > 0) d.play({ duration: this.developWanted });
+          }
           else still.push(item);
         } catch {
           /* 下一帧再试 */
