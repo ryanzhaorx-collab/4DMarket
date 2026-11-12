@@ -116,7 +116,7 @@ export async function bootPc() {
     // ② 空间折叠：千层糕展开（1.1s 起，1.6s）
     window.setTimeout(() => {
       engine.controls.autoRotate = false;
-      engine.openUnfold(74, 1900, 3);
+      engine.openUnfold(16, 1900, 3);
       sfx.whoosh(0.8);
       engine.playTimeline(
         [
@@ -131,7 +131,7 @@ export async function bootPc() {
       // 目标层（第 3 层）展开后在 midY + 37m 的位置：盒子就在原地，只沿视线方向轻推出来
       const yaw = engine.camera.yaw;
       const dir: [number, number, number] = [Math.sin(yaw) * 0.55, 0.12, Math.cos(yaw) * 0.55];
-      engine.showRoom([cx, midY + 37, cz], dir, 26, 1400, 'outBack');
+      engine.showRoom([cx, midY + 8, cz], dir, 20, 1400, 'outBack');
       sfx.latch();
       haptic(16);
     }, 2700);

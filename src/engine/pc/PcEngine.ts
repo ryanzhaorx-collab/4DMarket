@@ -238,7 +238,7 @@ export class PcEngine {
 
   private buildRoomMesh() {
     const b = new MeshBuilder();
-    const W = 46, D = 21, H = 6;
+    const W = 20, D = 20, H = 6;   // 一层楼板：40 × 40 × 6m
     b.box([-W - 1, -0.9, -D - 1], [W + 1, 0, D + 1], [40, 38, 34]);
     b.box([-W, 0, -D], [W, 0.08, D], [26, 24, 21]);
     const trim: [number, number, number][] = [
@@ -252,11 +252,9 @@ export class PcEngine {
     b.box([-W - 0.5, H - 0.24, D], [W + 0.5, H, D + 0.5], [214, 178, 106]);
     b.box([-W - 0.5, H - 0.24, -D], [-W, H, D], [214, 178, 106]);
     b.box([W, H - 0.24, -D], [W + 0.5, H, D], [214, 178, 106]);
-    for (let i = -2; i <= 2; i++) {
+    for (let i = -1; i <= 1; i++) {
       for (let j = -1; j <= 1; j++) {
-        const px = i * (W / 2.6);
-        const pz = j * (D / 1.6);
-        b.box([px - 0.5, 0, pz - 0.5], [px + 0.5, H - 0.24, pz + 0.5], [58, 56, 52]);
+        b.box([i * 12 - 0.5, 0, j * 12 - 0.5], [i * 12 + 0.5, H - 0.24, j * 12 + 0.5], [58, 56, 52]);
       }
     }
 
@@ -328,7 +326,8 @@ export class PcEngine {
     const miInner = new pc.MeshInstance(innerMesh, innerMat);
     miInner.castShadow = false;
     e.render!.meshInstances = [miInner, mi, miEdge];
-    e.setEulerAngles(-90, 0, 0);
+    // 注意：MeshBuilder 的几何本身就是 Y-up（薄的方向是 Y），
+    // 这里绝对不能再绕 X 转 -90°，否则楼板会立起来。
     e.enabled = false;
     this.app.root.addChild(e);
     this.roomEntity = e;
