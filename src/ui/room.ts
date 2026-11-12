@@ -217,27 +217,89 @@ function bindOrderPanel() {
   const panel = document.getElementById('orderPanel')!;
   const veil = document.getElementById('orderVeil')!;
   const grab = document.getElementById('orderGrab')!;
-  let y0 = 0;
-  let dragging = false;
-  const open = () => {
-    panel.classList.add('open');
-    veil.classList.add('show');
-    document.body.classList.add('order-open');
-  };
-  const close = () => {
-    panel.classList.remove('open');
-    veil.classList.remove('show');
-    document.body.classList.remove('order-open');
+
+  /** 收起时露出的高度（设计像素），和 CSS 的 210px 对应 */
+  const COLLAPSED = 210;
+  const collapsedY = () => Math.max(0, panel.offsetHeight - COLLAPSED);
+
+  let drag = false;
+  let startY = 0;
+  let startOffset = 0;
+  let moved = 0;
+
+  const isOpen = () => panel.classList.contains('open');
+  const currentOffset = () => (isOpen() ? 0 : collapsedY());
+
+  const setY = (y: number) => {
+    panel.style.transform = `translateY(${y}px)`;
   };
 
-  grab.addEventListener('pointerdown', (e) => { dragging = true; y0 = e.clientY; });
-  window.addEventListener('pointerup', (e) => {
-    if (!dragging) return;
-    dragging = false;
-    if (y0 - e.clientY > 40) open();
-    else if (e.clientY - y0 > 40) close();
+  const begin = (y: number) => {
+    drag = true;
+    moved = 0;
+    startY = y;
+    startOffset = currentOffset();
+    panel.classList.add('dragging');
+  };
+
+  const move = (y: number) => {
+    if (!drag) return;
+    const dy = y - startY;
+    moved = Math.max(moved, Math.abs(dy));
+    const next = Math.min(collapsedY(), Math.max(0, startOffset + dy));
+    setY(next);
+  };
+
+  const end = () => {
+    if (!drag) return;
+    drag = false;
+    panel.classList.remove('dragging');
+    const y = Number(/([\-\d.]+)px/.exec(panel.style.transform)?.[1] ?? currentOffset());
+    const shouldOpen = y < collapsedY() * 0.5;
+    panel.style.transform = '';
+    if (shouldOpen) {
+      panel.classList.add('open');
+      veil.classList.add('show');
+      document.body.classList.add('order-open');
+    } else {
+      panel.classList.remove('open');
+      veil.classList.remove('show');
+      document.body.classList.remove('order-open');
+    }
+  };
+
+  grab.addEventListener('pointerdown', (e) => {
+    grab.setPointerCapture(e.pointerId);
+    begin(e.clientY);
   });
-  grab.addEventListener('click', () => (panel.classList.contains('open') ? close() : open()));
+  grab.addEventListener('pointermove', (e) => move(e.clientY));
+  grab.addEventListener('pointerup', end);
+  grab.addEventListener('pointercancel', end);
+
+  // 点一下（没有拖动）也能切换，保留老习惯
+  grab.addEventListener('click', () => {
+    if (moved > 6) return;
+    if (isOpen()) {
+      panel.classList.remove('open');
+      veil.classList.remove('show');
+      document.body.classList.remove('order-open');
+    } else {
+      panel.classList.add('open');
+      veil.classList.add('show');
+      document.body.classList.add('order-open');
+    }
+  });
+
+  // 展开后，从内容区下滑也能收起（滚到顶部时）
+  panel.addEventListener('pointerdown', (e) => {
+    if (!isOpen() || e.target === grab || grab.contains(e.target as Node)) return;
+    if (panel.scrollTop > 0) return;
+    begin(e.clientY);
+  });
+  panel.addEventListener('pointermove', (e) => move(e.clientY));
+  panel.addEventListener('pointerup', end);
+  panel.addEventListener('pointercancel', end);
+
   const pay = document.getElementById('paypage');
   const openPay = () => pay?.classList.add('open');
   document.getElementById('buyBtn')?.addEventListener('click', openPay);

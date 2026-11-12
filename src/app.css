@@ -1690,3 +1690,11 @@ body.in-room #scene { opacity: 1; }
 /* 遮罩只做视觉，不拦截手势，也不响应点击关闭 */
 .orderveil { pointer-events: none !important; }
 .orderveil.show { pointer-events: none !important; }
+
+
+/* 拖拽时关闭过渡，跟手 */
+.orderpanel.dragging { transition: none !important; }
+
+
+/* 面板展开时，隐藏顶部 HUD（头像/标题/返回），避免压住价格 */
+body.order-open .hud { opacity: 0; pointer-events: none; transition: opacity 0.28s ease; }
