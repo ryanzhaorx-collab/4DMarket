@@ -118,11 +118,11 @@ export async function bootPc() {
     engine.playTimeline(
       [
         { t: 0, ...cam0 },
-        { t: 1.0, target: [cx, midY + 14, cz], distance: 620, yaw: 0.42, pitch: 0.2, fov: 46, ease: 'inOutCubic' },
+        { t: 1.0, target: [cx, midY + 14, cz], distance: 600, yaw: 0.95, pitch: 0.22, fov: 46, ease: 'inOutCubic' },
         // ② 空间折叠（1.0–2.8s）：镜头几乎不动，只把楼拉开
-        { t: 2.8, target: [cx, midY + 14, cz], distance: 600, yaw: 0.46, pitch: 0.18, fov: 46, ease: 'inOutCubic' },
+        { t: 2.8, target: [cx, midY + 10, cz], distance: 590, yaw: 0.98, pitch: 0.2, fov: 46, ease: 'inOutCubic' },
         // ③ 卡位（2.8–3.9s）：镜头轻推到目标楼层
-        { t: 3.9, target: [TOX, TOY, TOZ], distance: 430, yaw: 0.5, pitch: 0.16, fov: 44, ease: 'inOutCubic' },
+        { t: 3.9, target: [TOX - 10, TOY - 18, TOZ], distance: 480, yaw: 1.0, pitch: 0.18, fov: 44, ease: 'inOutCubic' },
       ],
       () => {
         drawerOpen = true;
@@ -139,8 +139,9 @@ export async function bootPc() {
     // 卡位：目标层抽出（镜头同一时间推到它面前）
     window.setTimeout(() => {
       const yaw = engine.camera.yaw;
-      const dir: [number, number, number] = [Math.sin(yaw) * 0.5, 0.1, Math.cos(yaw) * 0.5];
-      engine.showRoom([TOX, TOY, TOZ], dir, 22, 1200, 'outBack');
+      // 按箭头方向：朝观众 + 略微向下抽出
+      const dir: [number, number, number] = [Math.sin(yaw) * 0.82, -0.34, Math.cos(yaw) * 0.82];
+      engine.showRoom([TOX, TOY + 6, TOZ], dir, 78, 1300, 'outBack');
       sfx.latch();
       haptic(14);
     }, 2750);
