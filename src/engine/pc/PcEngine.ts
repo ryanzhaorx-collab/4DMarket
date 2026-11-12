@@ -9,6 +9,7 @@ import * as pc from 'playcanvas';
 import { OrbitCamera } from '../Camera';
 import { OrbitControls } from '../OrbitControls';
 import { CameraTimeline, type CameraKey } from '../CameraTimeline';
+import { DevelopEffect } from './DevelopEffect';
 import { MeshBuilder } from '../VirtualRoom';
 import type { Vec3 } from '../math';
 
@@ -30,6 +31,8 @@ export class PcEngine {
   private camEntity: pc.Entity;
   private root: pc.Entity;
   private layerEntities: pc.Entity[] = [];
+  private develop: DevelopEffect[] = [];
+  private pendingDevelop: { e: pc.Entity; res: unknown }[] = [];
   private interiorEntity: pc.Entity | null = null;
   /** 室内扫描的朝向/缩放，先用参数试，定了再写死 */
   interiorRot: [number, number, number] = [-90, 0, 0];
@@ -185,6 +188,9 @@ export class PcEngine {
         this.root.addChild(e);
         this.layerEntities[index] = e;
         this.loaded++;
+        // 挂「冲洗显影」特效（与参考实现同一套着色器）
+        // 材质的 instance 要等首帧渲染后才创建，先排队
+        this.pendingDevelop.push({ e, res: asset.resource });
         resolve();
       });
       asset.on('error', () => resolve());
@@ -215,6 +221,11 @@ export class PcEngine {
     this.camera.yaw = 0.62;
     this.camera.pitch = 0.38;
     this.camera.fov = 52;
+  }
+
+  /** 「冲洗显影」入场：分界线自上而下扫过，点云显影成实体 */
+  playDevelop(duration = 1800) {
+    for (const d of this.develop) d.play({ duration });
   }
 
   /** resolve 近似：整体从 0.88 放大到 1，配合镜头推进做「凝聚成形」 */
@@ -443,6 +454,24 @@ export class PcEngine {
     } else {
       this.controls.update(dt);
     }
+
+    // 首帧之后实体才有 gsplat instance（材质），这时才能挂着色器钩子
+    if (this.pendingDevelop.length) {
+      const still: typeof this.pendingDevelop = [];
+      for (const item of this.pendingDevelop) {
+        try {
+          const d = new DevelopEffect(this.app, item.e as never, item.res as never, this.camEntity);
+          if (d.ready) this.develop.push(d);
+          else still.push(item);
+        } catch {
+          /* 下一帧再试 */
+          still.push(item);
+        }
+      }
+      this.pendingDevelop = still;
+    }
+
+    for (const d of this.develop) d.update(dt);
 
     this.camera.update();
     this.camEntity.setPosition(this.camera.eye[0], this.camera.eye[1], this.camera.eye[2]);
