@@ -6,6 +6,7 @@ import { PcEngine } from '../engine/pc/PcEngine';
 import { mountRoom, unmountRoom } from '../ui/room';
 import { Sfx, haptic } from '../ui/sfx';
 import { probe } from '../engine/pc/platform';
+import { loadTune, mountTune, type TuneParams } from '../ui/tune';
 // 团队提供的查看器（纯 JS，字段按 JSDoc 推断）
 import { SplatViewer } from '../engine/pc/viewer/splat-viewer.js';
 
@@ -56,6 +57,17 @@ export async function bootPc() {
   engine.interiorScale = iscale || 1;
 
   const sfx = new Sfx();
+
+  // 调参面板（?tune=1）：所有动画数值都从这里读
+  const tune: TuneParams = loadTune();
+  if (new URLSearchParams(location.search).get('tune') === '1') {
+    mountTune(tune, () => {
+      drawerOpen = false;
+      inRoom = false;
+      busy = false;
+      openDrawer();
+    });
+  }
   const loader = document.getElementById('loader');
   const pct = document.getElementById('loadPct');
   const sub = document.getElementById('loadSub');
@@ -92,7 +104,7 @@ export async function bootPc() {
   engine.applyCameraPose({ ...home, distance: 900, fov: 64 });
   // 先出点云，再慢慢显影：等所有分层就绪再开始扫，避免各层各自起跑
   // 入场显影：每层加载完自动开扫（时长在这里设定）
-  engine.playDevelop(4200, 0);
+  engine.playDevelop(tune.developDuration, 0);
   document.getElementById('flash')?.classList.add('run');
   engine.playTimeline(
     [
@@ -123,10 +135,10 @@ export async function bootPc() {
     // 目标楼层在「左塔」里：x 往左、z 往前的偏移，高度取中间那刀
     const TOX = cx - 38;
     const TOZ = cz - 14;
-    const TOY = midY + 8;
+    const TOY = midY + tune.pushStartY;
     const yawNow = engine.camera.yaw;
     const PUSH: [number, number, number] = [Math.sin(yawNow), 0, Math.cos(yawNow)];
-    const PUSH_DIST = 92;
+    const PUSH_DIST = tune.pushDistance;
     const PLATE: [number, number, number] = [TOX, TOY, TOZ];
     const at = (d: number): [number, number, number] => [
       PLATE[0] + PUSH[0] * d,
@@ -164,7 +176,7 @@ export async function bootPc() {
     );
 
     // 分层展开与镜头同步开始，不再用 setTimeout 另起一条时间轴
-    engine.openUnfold(16, 1800, 3);
+    engine.openUnfold(tune.unfoldSpread, tune.unfoldDuration, 3);
     sfx.whoosh(0.8);
 
     // ① 拆分完：玻璃层在原地渐显（不位移）
@@ -174,7 +186,7 @@ export async function bootPc() {
 
     // ② 渐显后：沿 PUSH 朝镜头平推
     window.setTimeout(() => {
-      engine.showRoom(PLATE, PUSH, PUSH_DIST, 2400, 'inOutCubic');
+      engine.showRoom(PLATE, PUSH, tune.pushDistance, tune.pushDuration, 'inOutCubic');
       sfx.latch();
       haptic(14);
     }, 3250);
