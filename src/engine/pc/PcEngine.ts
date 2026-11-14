@@ -308,6 +308,9 @@ export class PcEngine {
     this.timeline.play(keys, () => {
       this.timelinePlayingFlag = false;
       this.controls.enabled = true;
+      // 关键：OrbitControls 有自己的 distance/yaw/pitch，
+      // 时间轴结束后如果不同步，下一帧就会被它拽回旧机位
+      (this.controls as unknown as { syncFromCamera?: () => void }).syncFromCamera?.();
       onDone?.();
     });
     this.timelinePlayingFlag = true;
@@ -420,10 +423,13 @@ export class PcEngine {
     e.addComponent('render', { type: 'asset' });
     // 暖光内景：一张床 + 两盏灯（让玻璃盒里「有东西」）
     const inner = new MeshBuilder();
-    inner.box([-8, 0.1, -6], [8, 1.1, 2], [222, 214, 198]);        // 床
-    inner.box([-8.2, 1.1, 1.4], [8.2, 2.0, 2.2], [150, 120, 92]);  // 床头板
-    inner.box([-2, 2.2, -9], [2, 2.6, -8], [255, 224, 160]);       // 顶灯
-    inner.box([13, 1.0, -8], [14, 2.2, -7], [255, 210, 140]);      // 落地灯
+    // 尺寸必须小于玻璃盒（7 × 6 × 3.2m），否则会溢出来
+    inner.box([-1.5, 0.02, -1.1], [1.2, 0.55, 0.9], [232, 226, 212]);   // 床
+    inner.box([-1.6, 0.55, 0.7], [1.3, 1.25, 0.95], [150, 120, 92]);    // 床头板
+    inner.box([-0.5, 0.55, -0.3], [0.3, 0.72, 0.2], [250, 246, 238]);   // 枕头
+    inner.box([-0.4, 0.55, -0.1], [0.2, 0.72, 0.25], [170, 46, 40]);    // 红抱枕
+    inner.box([-0.5, 2.5, -0.5], [0.5, 2.9, 0.5], [255, 230, 170]);     // 顶灯
+    inner.box([2.6, 0.0, -2.0], [3.0, 1.4, -1.6], [255, 214, 150]);     // 落地灯
     const innerMesh = new pc.Mesh(this.app.graphicsDevice);
     innerMesh.setPositions(new Float32Array(inner.pos));
     innerMesh.setNormals(new Float32Array(inner.nrm));
@@ -444,13 +450,47 @@ export class PcEngine {
     innerMat.emissiveIntensity = 1.4;
     innerMat.update();
 
+    // 外发光壳：把同一 mesh 放大一点，用叠加混合做出「泛光」边缘
+    const halos: pc.MeshInstance[] = [];
+    for (const [scale, alpha] of [[1.03, 0.10], [1.07, 0.055], [1.12, 0.03]] as const) {
+      const m = this.app.scene.defaultMaterial.clone();
+      m.diffuse = new pc.Color(0.45, 0.95, 1);
+      m.emissive = new pc.Color(0.45, 0.95, 1);
+      m.emissiveIntensity = 1.6;
+      m.opacity = alpha;
+      m.blendType = pc.BLEND_ADDITIVEALPHA;
+      m.depthWrite = false;
+      m.cull = pc.CULLFACE_FRONT;   // 只画背面，形成包边
+      m.update();
+      const mi = new pc.MeshInstance(mesh, m);
+      mi.castShadow = false;
+      const ent = new pc.Entity(`halo-${scale}`, this.app);
+      ent.setLocalScale(scale, scale, scale);
+      ent.addComponent('render', { type: 'asset' });
+      ent.render!.meshInstances = [mi];
+      e.addChild(ent);
+      halos.push(mi);
+    }
+
     const mi = new pc.MeshInstance(mesh, material);
     mi.castShadow = false;
     const miEdge = new pc.MeshInstance(mesh, edgeMat);
     miEdge.castShadow = false;
     const miInner = new pc.MeshInstance(innerMesh, innerMat);
     miInner.castShadow = false;
-    e.render!.meshInstances = [miEdge];
+    e.render!.meshInstances = [miInner, miEdge];   // 暖光内景 + 青色边
+
+    // 盒内暖光：给玻璃盒一点「房间亮着灯」的氛围
+    const lamp = new pc.Entity('room-light', this.app);
+    lamp.addComponent('light', {
+      type: 'omni',
+      color: new pc.Color(1.0, 0.82, 0.55),
+      intensity: 1.6,
+      range: 26,
+      castShadows: false,
+    });
+    lamp.setLocalPosition(0, 2.2, 0);
+    e.addChild(lamp);
     // 注意：MeshBuilder 的几何本身就是 Y-up（薄的方向是 Y），
     // 这里绝对不能再绕 X 转 -90°，否则楼板会立起来。
     e.enabled = false;
