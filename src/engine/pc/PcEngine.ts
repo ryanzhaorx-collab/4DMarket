@@ -401,16 +401,17 @@ export class PcEngine {
     material.diffuseVertexColor = true;
     material.blendType = pc.BLEND_NORMAL;
     material.depthWrite = false;
-    material.opacity = 0.62;   // 玻璃感：能透出一点内部
+    material.diffuse = new pc.Color(0.35, 0.85, 1.0);   // 青色玻璃
+    material.opacity = 0.34;
     material.update();
 
     // 边缘发光：金色轮廓线（爆炸图里那一圈高亮）
     const edgeMat = this.app.scene.defaultMaterial.clone();
     edgeMat.diffuse = new pc.Color(1, 1, 1);
     edgeMat.diffuseVertexColor = true;
-    edgeMat.emissive = new pc.Color(0.35, 0.75, 1);
-    edgeMat.emissiveIntensity = 0.9;
-    edgeMat.opacity = 0.16;
+    edgeMat.emissive = new pc.Color(0.45, 0.95, 1.0);   // 青色辉光
+    edgeMat.emissiveIntensity = 2.2;
+    edgeMat.opacity = 0.55;
     edgeMat.blendType = pc.BLEND_ADDITIVEALPHA;
     edgeMat.depthWrite = false;
     edgeMat.update();
@@ -439,8 +440,8 @@ export class PcEngine {
     const innerMat = this.app.scene.defaultMaterial.clone();
     innerMat.diffuse = new pc.Color(1, 1, 1);
     innerMat.diffuseVertexColor = true;
-    innerMat.emissive = new pc.Color(0.5, 0.38, 0.2);
-    innerMat.emissiveIntensity = 0.8;
+    innerMat.emissive = new pc.Color(0.95, 0.72, 0.42);  // 暖色内景
+    innerMat.emissiveIntensity = 1.4;
     innerMat.update();
 
     const mi = new pc.MeshInstance(mesh, material);

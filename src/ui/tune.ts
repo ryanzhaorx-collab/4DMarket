@@ -25,13 +25,13 @@ export type TuneParams = {
 };
 
 export const DEFAULT_TUNE: TuneParams = {
-  unfoldSpread: 16,
+  unfoldSpread: 7,
   unfoldDuration: 1800,
   pushDistance: 92,
   pushDuration: 2400,
   pushStartY: 8,
   developDuration: 4200,
-  camDistance: 590,
+  camDistance: 520,
   camYaw: 0.98,
   camPitch: 0.2,
 };
