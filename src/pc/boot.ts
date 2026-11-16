@@ -211,12 +211,13 @@ export async function bootPc() {
     document.body.classList.add('night-mode');
     sfx.whoosh(0.6);
 
-    // ② 镜头推进到目标楼后：叠加独立模型并分层（大场景保持完整，不挖洞）
+    // ② 大场景撤掉，只留特效模型
     window.setTimeout(() => {
+      engine.setBackgroundVisible(false);
       engine.showFloors(true);
       engine.openUnfold(tune.unfoldSpread, tune.unfoldDuration, 3);
       sfx.whoosh(0.9);
-    }, 1000);
+    }, 900);
 
     // ① 拆分完：玻璃层在原地渐显（不位移）
     window.setTimeout(() => {
@@ -284,6 +285,8 @@ export async function bootPc() {
     document.getElementById('orderVeil')?.classList.remove('show');
     document.getElementById('roomlabel')?.classList.remove('show');
     document.body.classList.remove('order-open', 'night-mode');
+    engine.setBackgroundVisible(true);
+    engine.showFloors(false);
     engine.exitRoomScene();
     engine.hideRoom(0);
     engine.closeSplit(700);

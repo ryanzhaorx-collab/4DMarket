@@ -37,6 +37,11 @@ export class PcEngine {
   bgEntity: pc.Entity | null = null;
   private develop: DevelopEffect[] = [];
 
+  /** 显示/隐藏大场景（进入特效时整体撤掉） */
+  setBackgroundVisible(on: boolean) {
+    if (this.bgEntity) this.bgEntity.enabled = on;
+  }
+
   /** 显示/隐藏「特效楼层」（叠加在原始场景之上的独立模型） */
   showFloors(on: boolean) {
     for (const e of this.layerEntities) if (e) e.enabled = on;
@@ -65,9 +70,9 @@ export class PcEngine {
   interiorRot: [number, number, number] = [-90, 0, 0];
   interiorScale = 1;   // 缩放已烘进资产，这里保持 1
   /** 扫描模型的中心偏移（标定用，单位与扫描一致） */
-  interiorOffset: [number, number, number] = [0, 0, 0];
+  interiorOffset: [number, number, number] = [1.35, 1.95, 0.5];   // 扫描包围盒中心，用于居中
   /** 玻璃盒尺寸（米），改完调用 rebuildRoom() 生效 */
-  roomSize = { w: 7, d: 6, h: 3.2 };
+  roomSize = { w: 9.3, d: 13.2, h: 3.4 };   // splat_30000_cleaned 的真实尺寸
 
   /** 第二页室内机位距离（可 URL 覆盖，便于标定） */
   roomDistance = 2.2;   // 站在房间中心（室内视角）
@@ -213,6 +218,8 @@ export class PcEngine {
 
   /** 退出室内，恢复整栋楼 */
   exitRoomScene() {
+    this.setBackgroundVisible(true);
+    this.showFloors(false);
     this.roomMode = false;
     for (const e of this.layerEntities) if (e) e.enabled = true;
     if (this.interiorEntity) this.interiorEntity.enabled = false;
@@ -654,6 +661,15 @@ export class PcEngine {
   showRoom(anchor: Vec3, dir: Vec3, dist: number, duration = 1400, ease = 'outBack') {
     const e = this.ensureRoom();
     if (!e) return;
+    if (this.interiorEntity) {
+      const sc = this.interiorScale;
+      this.interiorEntity.enabled = true;
+      this.interiorEntity.setPosition(
+        anchor[0] - this.interiorOffset[0] * sc,
+        anchor[1] - this.interiorOffset[1] * sc,
+        anchor[2] - this.interiorOffset[2] * sc,
+      );
+    }
     e.enabled = true;
     const to: Vec3 = [anchor[0] + dir[0] * dist, anchor[1] + dir[1] * dist, anchor[2] + dir[2] * dist];
     this.roomPos = [...anchor] as Vec3;
@@ -770,6 +786,16 @@ export class PcEngine {
         }
       }
       if (raw >= 1) this.roomAnim = null;
+      // 真实扫描跟随玻璃框一起位移
+      if (this.interiorEntity) {
+        this.interiorEntity.enabled = true;
+        const sc = this.interiorScale;
+        this.interiorEntity.setPosition(
+          this.roomPos[0] - this.interiorOffset[0] * sc,
+          this.roomPos[1] - this.interiorOffset[1] * sc,
+          this.roomPos[2] - this.interiorOffset[2] * sc,
+        );
+      }
     }
     if (this.roomEntity && this.roomEntity.enabled) {
       this.roomEntity.setPosition(this.roomPos[0], this.roomPos[1], this.roomPos[2]);
