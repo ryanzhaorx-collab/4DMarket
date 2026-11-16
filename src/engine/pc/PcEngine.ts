@@ -37,6 +37,16 @@ export class PcEngine {
   bgEntity: pc.Entity | null = null;
   private develop: DevelopEffect[] = [];
 
+  /** 诊断：各资产加载情况 */
+  get loadReport() {
+    return {
+      background: !!this.bgEntity,
+      floors: this.layerEntities.filter(Boolean).length,
+      floorTotal: this.opts.floors.length,
+      room: !!this.interiorEntity,
+    };
+  }
+
   /** 已挂上显影特效的层数（入场特效的启动条件） */
   get developReadyCount(): number {
     return this.develop.filter((d) => d.ready).length;

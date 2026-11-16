@@ -363,6 +363,22 @@ export async function bootPc() {
     });
   }
 
+  // ?dbg=1：左上角显示资产加载情况（排查空洞用）
+  if (q.get('dbg') === '1') {
+    const box = document.createElement('div');
+    box.style.cssText =
+      'position:fixed;left:12px;top:70px;z-index:999;padding:8px 12px;border-radius:8px;' +
+      'background:rgba(8,12,16,.85);border:1px solid rgba(120,210,255,.4);color:#9fe0ff;' +
+      'font:12px/1.5 -apple-system,sans-serif;white-space:pre';
+    document.body.appendChild(box);
+    const tick = () => {
+      const r = engine.loadReport;
+      box.textContent = `背景 ${r.background ? '✓' : '✗'}  楼层 ${r.floors}/${r.floorTotal}  房间 ${r.room ? '✓' : '✗'}`;
+      window.setTimeout(tick, 500);
+    };
+    tick();
+  }
+
   const enterSpace = () => {
     if (inRoom) return;
     if (drawerOpen) enterRoom();
