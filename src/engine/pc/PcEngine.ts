@@ -470,8 +470,8 @@ export class PcEngine {
     edgeMat.diffuse = new pc.Color(1, 1, 1);
     edgeMat.diffuseVertexColor = true;
     edgeMat.emissive = new pc.Color(0.45, 0.95, 1.0);   // 青色辉光
-    edgeMat.emissiveIntensity = 2.2;
-    edgeMat.opacity = 0.55;
+    edgeMat.emissiveIntensity = 3.4;
+    edgeMat.opacity = 0.85;
     edgeMat.blendType = pc.BLEND_ADDITIVEALPHA;
     edgeMat.depthWrite = false;
     edgeMat.update();
@@ -529,13 +529,40 @@ export class PcEngine {
       halos.push(mi);
     }
 
+    // —— 蓝图线稿装饰（虚线框 / 角标 / 地面网格 / 环绕光弧），跟随盒子一起动 ——
+    const deco = this.buildBlueprint(this.roomSize.w, this.roomSize.d, this.roomSize.h);
+    const decoMesh = new pc.Mesh(this.app.graphicsDevice);
+    decoMesh.setPositions(new Float32Array(deco.pos));
+    decoMesh.setNormals(new Float32Array(deco.nrm));
+    const decoCols = new Float32Array((deco.pos.length / 3) * 4);
+    for (let i = 0; i < deco.pos.length / 3; i++) {
+      decoCols[i * 4] = deco.col[i * 4] / 255;
+      decoCols[i * 4 + 1] = deco.col[i * 4 + 1] / 255;
+      decoCols[i * 4 + 2] = deco.col[i * 4 + 2] / 255;
+      decoCols[i * 4 + 3] = 1;
+    }
+    decoMesh.setColors(decoCols as unknown as number[]);
+    decoMesh.setIndices(new Uint32Array(deco.idx));
+    decoMesh.update(pc.PRIMITIVE_TRIANGLES);
+    const decoMat = this.app.scene.defaultMaterial.clone();
+    decoMat.diffuse = new pc.Color(0.45, 0.9, 1);
+    decoMat.emissive = new pc.Color(0.45, 0.9, 1);
+    decoMat.emissiveIntensity = 2.6;
+    decoMat.diffuseVertexColor = true;
+    decoMat.blendType = pc.BLEND_ADDITIVEALPHA;
+    decoMat.depthWrite = false;
+    decoMat.opacity = 0.9;
+    decoMat.update();
+    const miDeco = new pc.MeshInstance(decoMesh, decoMat);
+    miDeco.castShadow = false;
+
     const mi = new pc.MeshInstance(mesh, material);
     mi.castShadow = false;
     const miEdge = new pc.MeshInstance(mesh, edgeMat);
     miEdge.castShadow = false;
     const miInner = new pc.MeshInstance(innerMesh, innerMat);
     miInner.castShadow = false;
-    e.render!.meshInstances = [miInner, miEdge];   // 暖光内景 + 青色边
+    e.render!.meshInstances = [miInner, miEdge, miDeco];   // 暖光内景 + 青色边
 
     // 盒内暖光：给玻璃盒一点「房间亮着灯」的氛围
     const lamp = new pc.Entity('room-light', this.app);
@@ -553,6 +580,75 @@ export class PcEngine {
     e.enabled = false;
     this.app.root.addChild(e);
     this.roomEntity = e;
+  }
+
+  /**
+   * 蓝图线稿装饰：用细长方块拼出线（虚线、角标、地面网格、环绕光弧）。
+   * 全部挂在房间实体下，跟着盒子一起推出去。
+   */
+  private buildBlueprint(w: number, d: number, h: number) {
+    const b = new MeshBuilder();
+    const T = 0.04;
+    const cyan: [number, number, number] = [110, 225, 255];
+    const dim: [number, number, number] = [60, 130, 170];
+
+    const line = (x0: number, y0: number, z0: number, x1: number, y1: number, z1: number, c = cyan) => {
+      const half = T / 2;
+      b.box(
+        [Math.min(x0, x1) - half, Math.min(y0, y1) - half, Math.min(z0, z1) - half],
+        [Math.max(x0, x1) + half, Math.max(y0, y1) + half, Math.max(z0, z1) + half],
+        c,
+      );
+    };
+    const dash = (x0: number, y0: number, z0: number, x1: number, y1: number, z1: number, n = 28, c = cyan) => {
+      for (let i = 0; i < n; i += 2) {
+        const t0 = i / n;
+        const t1 = (i + 1) / n;
+        line(
+          x0 + (x1 - x0) * t0, y0 + (y1 - y0) * t0, z0 + (z1 - z0) * t0,
+          x0 + (x1 - x0) * t1, y0 + (y1 - y0) * t1, z0 + (z1 - z0) * t1, c,
+        );
+      }
+    };
+
+    // ① 地面网格
+    const gw = Math.max(w, 12) * 2;
+    const gd = Math.max(d, 10) * 2;
+    for (let x = -gw / 2; x <= gw / 2 + 0.01; x += 2) line(x, -0.02, -gd / 2, x, -0.02, gd / 2, dim);
+    for (let z = -gd / 2; z <= gd / 2 + 0.01; z += 2) line(-gw / 2, -0.02, z, gw / 2, -0.02, z, dim);
+
+    // ② 顶/底虚线框
+    const hw = w / 2;
+    const hd = d / 2;
+    dash(-hw, h, -hd, hw, h, -hd);
+    dash(-hw, h, hd, hw, h, hd);
+    dash(-hw, h, -hd, -hw, h, hd);
+    dash(hw, h, -hd, hw, h, hd);
+    dash(-hw, 0.02, -hd, hw, 0.02, -hd, 20, dim);
+    dash(-hw, 0.02, hd, hw, 0.02, hd, 20, dim);
+
+    // ③ 四角竖向角标
+    const L = Math.min(1.6, h * 0.5);
+    for (const sx of [-1, 1]) {
+      for (const sz of [-1, 1]) {
+        line(sx * hw, 0, sz * hd, sx * hw, L, sz * hd);
+        line(sx * hw, h, sz * hd, sx * hw, h - L, sz * hd);
+      }
+    }
+
+    // ④ 环绕光弧（倾斜椭圆虚线）
+    const R = Math.max(hw, hd) * 1.9;
+    const seg = 96;
+    for (let i = 0; i < seg; i++) {
+      if (i % 3 === 0) continue;
+      const a0 = (i / seg) * Math.PI * 2;
+      const a1 = ((i + 1) / seg) * Math.PI * 2;
+      const y0 = h * 0.5 + Math.sin(a0 * 2) * 0.6;
+      const y1 = h * 0.5 + Math.sin(a1 * 2) * 0.6;
+      line(Math.cos(a0) * R, y0, Math.sin(a0) * R * 0.72, Math.cos(a1) * R, y1, Math.sin(a1) * R * 0.72);
+    }
+
+    return b;
   }
 
   showRoom(anchor: Vec3, dir: Vec3, dist: number, duration = 1400, ease = 'outBack') {
