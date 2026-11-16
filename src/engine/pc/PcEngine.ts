@@ -237,9 +237,10 @@ export class PcEngine {
     const rest = urls.slice(1).map((u, i) => this.loadLayer(i + 1, u));
     void Promise.all(rest).then(() => this.onFullLoad?.());
 
+    // yuehua.ply 原始为 Z-up：世界 Y = 模型 Z（4.8~135），世界 Z = -模型 Y（-318~352）
     this.bounds = {
-      min: [-104, -70, -113],
-      max: [119, 116, 110],
+      min: [-329, 4.8, -318],
+      max: [303, 135, 352],
     };
     const b = this.bounds;
     this.camera.target = [(b.min[0] + b.max[0]) / 2, (b.min[1] + b.max[1]) / 2, (b.min[2] + b.max[2]) / 2];
