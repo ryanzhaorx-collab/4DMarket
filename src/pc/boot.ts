@@ -297,6 +297,8 @@ export async function bootPc() {
     badge.textContent = '点一下地面取坐标';
     document.body.appendChild(badge);
 
+    // 用相机基向量构造射线：r = normalize(cross(f, up))，u = cross(r, f)
+    // 注意 r 的符号：写成 [f.z, 0, -f.x] 会左右镜像，转动镜头后取点就飘
     const pickPoint = (clientX: number, clientY: number) => {
       const cam = engine.camera;
       const rect = canvas.getBoundingClientRect();
@@ -304,40 +306,51 @@ export async function bootPc() {
       const ndcY = 1 - ((clientY - rect.top) / rect.height) * 2;
       const tan = Math.tan((cam.fov * Math.PI) / 360);
       const aspect = rect.width / rect.height;
-      // 相机基向量
-      const fwd: [number, number, number] = [
+
+      const f: [number, number, number] = [
         cam.target[0] - cam.eye[0],
         cam.target[1] - cam.eye[1],
         cam.target[2] - cam.eye[2],
       ];
-      const fl = Math.hypot(...fwd) || 1;
-      const f: [number, number, number] = [fwd[0] / fl, fwd[1] / fl, fwd[2] / fl];
-      const r: [number, number, number] = [f[2], 0, -f[0]];
+      const fl = Math.hypot(f[0], f[1], f[2]) || 1;
+      f[0] /= fl; f[1] /= fl; f[2] /= fl;
+
+      // r = normalize(cross(f, (0,1,0))) = normalize((-f.z, 0, f.x))
+      const r: [number, number, number] = [-f[2], 0, f[0]];
       const rl = Math.hypot(r[0], r[2]) || 1;
       r[0] /= rl; r[2] /= rl;
+
+      // u = cross(r, f)
       const u: [number, number, number] = [
         r[1] * f[2] - r[2] * f[1],
         r[2] * f[0] - r[0] * f[2],
         r[0] * f[1] - r[1] * f[0],
       ];
+
       const dir: [number, number, number] = [
         f[0] + r[0] * ndcX * tan * aspect + u[0] * ndcY * tan,
         f[1] + r[1] * ndcX * tan * aspect + u[1] * ndcY * tan,
         f[2] + r[2] * ndcX * tan * aspect + u[2] * ndcY * tan,
       ];
-      const t = -cam.eye[1] / (dir[1] || 1e-6);      // 与 y=0 平面求交
+
+      if (Math.abs(dir[1]) < 1e-4) return null;          // 射线与地面平行
+      const t = -cam.eye[1] / dir[1];
+      if (t <= 0) return null;                            // 交点在身后
       return { x: cam.eye[0] + dir[0] * t, z: cam.eye[2] + dir[2] * t };
     };
 
+
     canvas.addEventListener('pointermove', (e) => {
       const p = pickPoint(e.clientX, e.clientY);
-      badge.textContent = `x ${p.x.toFixed(0)}   z ${p.z.toFixed(0)}\n（点一下复制）`;
+      badge.textContent = p ? `x ${p.x.toFixed(0)}   z ${p.z.toFixed(0)}\n（点一下复制）` : '射线与地面平行，抬高视角';
     });
     canvas.addEventListener('click', (e) => {
       const p = pickPoint(e.clientX, e.clientY);
+      if (!p) return;
       const txt = `${p.x.toFixed(0)}, ${p.z.toFixed(0)}`;
       void navigator.clipboard?.writeText(txt).catch(() => {});
       badge.textContent = `已复制：${txt}`;
+      console.warn('[pick]', txt);
     });
   }
 
