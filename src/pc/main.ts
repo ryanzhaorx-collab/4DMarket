@@ -7,7 +7,7 @@ const btn = document.getElementById('go') as HTMLButtonElement;
 
 const engine = new PcEngine({
   canvas,
-  layers: [0, 1, 2, 3, 4, 5].map((i) => `/models/HS_Bolimuqiang/layer-${i}.sog`),
+  layers: ['/models/yuehua/main.sog'],
 });
 
 void (async () => {

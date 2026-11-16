@@ -45,8 +45,8 @@ export async function bootPc() {
 
   const engine = new PcEngine({
     canvas,
-    layers: [0, 1, 2, 3, 4, 5].map((i) => `/models/HS_Bolimuqiang/layer-${i}.sog`),
-    roomUrl: '/models/room.sog',
+    layers: ['/models/yuehua/main.sog'],
+    roomUrl: '/models/yuehua/room.sog',
   });
 
   engine.interiorRot = [ir[0] || 0, ir[1] || 0, ir[2] || 0];
@@ -60,13 +60,22 @@ export async function bootPc() {
 
   // 调参面板（?tune=1）：所有动画数值都从这里读
   const tune: TuneParams = loadTune();
+  engine.roomSize = { w: tune.boxW, d: tune.boxD, h: tune.boxH };
   if (new URLSearchParams(location.search).get('tune') === '1') {
-    mountTune(tune, () => {
-      drawerOpen = false;
-      inRoom = false;
-      busy = false;
-      openDrawer();
-    });
+    mountTune(
+      tune,
+      () => {
+        drawerOpen = false;
+        inRoom = false;
+        busy = false;
+        openDrawer();
+      },
+      (p) => {
+        // 尺寸变化即时重建玻璃盒
+        engine.roomSize = { w: p.boxW, d: p.boxD, h: p.boxH };
+        engine.rebuildRoom();
+      },
+    );
   }
   const loader = document.getElementById('loader');
   const pct = document.getElementById('loadPct');

@@ -47,6 +47,9 @@ export class PcEngine {
   interiorScale = 1;   // 缩放已烘进资产，这里保持 1
   /** 扫描模型的中心偏移（标定用，单位与扫描一致） */
   interiorOffset: [number, number, number] = [0, 0, 0];
+  /** 玻璃盒尺寸（米），改完调用 rebuildRoom() 生效 */
+  roomSize = { w: 7, d: 6, h: 3.2 };
+
   /** 第二页室内机位距离（可 URL 覆盖，便于标定） */
   roomDistance = 2.2;   // 站在房间中心（室内视角）
   private roomEntity: pc.Entity | null = null;
@@ -172,6 +175,21 @@ export class PcEngine {
     // OrbitControls 有自己的 yaw/pitch 状态，改完相机必须同步回去，否则会被覆盖
     (this.controls as unknown as { syncFromCamera?: () => void }).syncFromCamera?.();
     this.roomMode = true;
+  }
+
+  /** 改尺寸后重建玻璃盒（调试面板用） */
+  rebuildRoom() {
+    const old = this.roomEntity;
+    if (!old) return;
+    this.app.root.removeChild(old);
+    old.destroy();
+    this.roomEntity = null;
+    this.roomReady = false;
+    const fresh = this.ensureRoom();
+    if (fresh) {
+      fresh.enabled = true;
+      fresh.setPosition(this.roomPos[0], this.roomPos[1], this.roomPos[2]);
+    }
   }
 
   /** 退出室内，恢复整栋楼 */
@@ -366,7 +384,9 @@ export class PcEngine {
 
   private buildRoomMesh() {
     const b = new MeshBuilder();
-    const W = 3.5, D = 3, H = 3.2;   // 玻璃房间盒：7 × 6 × 3.2m
+    const W = this.roomSize.w / 2;
+    const D = this.roomSize.d / 2;
+    const H = this.roomSize.h;
     b.box([-W - 1, -0.9, -D - 1], [W + 1, 0, D + 1], [40, 38, 34]);
     b.box([-W, 0, -D], [W, 0.08, D], [26, 24, 21]);
     const trim: [number, number, number][] = [

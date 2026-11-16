@@ -22,6 +22,12 @@ export type TuneParams = {
   camYaw: number;
   /** 主机位：俯仰角 */
   camPitch: number;
+  /** 玻璃盒尺寸：宽（米） */
+  boxW: number;
+  /** 玻璃盒尺寸：深（米） */
+  boxD: number;
+  /** 玻璃盒尺寸：高（米） */
+  boxH: number;
 };
 
 export const DEFAULT_TUNE: TuneParams = {
@@ -34,6 +40,9 @@ export const DEFAULT_TUNE: TuneParams = {
   camDistance: 520,
   camYaw: 0.98,
   camPitch: 0.2,
+  boxW: 7,
+  boxD: 6,
+  boxH: 3.2,
 };
 
 const KEY = 'dsh.tune.v1';
@@ -68,10 +77,17 @@ const FIELDS: Field[] = [
   { key: 'camDistance', label: '主机位距离', min: 200, max: 1200, step: 10, unit: 'm' },
   { key: 'camYaw', label: '主机位水平角', min: -1.6, max: 1.6, step: 0.02 },
   { key: 'camPitch', label: '主机位俯仰', min: -0.2, max: 1.2, step: 0.01 },
+  { key: 'boxW', label: '玻璃盒 宽', min: 2, max: 60, step: 0.5, unit: 'm' },
+  { key: 'boxD', label: '玻璃盒 深', min: 2, max: 60, step: 0.5, unit: 'm' },
+  { key: 'boxH', label: '玻璃盒 高', min: 1, max: 30, step: 0.2, unit: 'm' },
 ];
 
 /** 挂载调参面板，返回当前参数对象（外部随时读取） */
-export function mountTune(initial: TuneParams, onReplay: () => void): TuneParams {
+export function mountTune(
+  initial: TuneParams,
+  onReplay: () => void,
+  onChange?: (p: TuneParams) => void,
+): TuneParams {
   const p = { ...initial };
   const host = document.createElement('div');
   host.className = 'tune';
@@ -104,6 +120,7 @@ export function mountTune(initial: TuneParams, onReplay: () => void): TuneParams
       p[f.key] = Number(input.value);
       em.textContent = `${p[f.key]}${f.unit ?? ''}`;
       saveTune(p);
+      onChange?.(p);
     });
     body.appendChild(row);
   }
