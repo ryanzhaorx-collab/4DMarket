@@ -45,7 +45,7 @@ export async function bootPc() {
 
   const engine = new PcEngine({
     canvas,
-    background: '/models/yuehua/scene-rest.sog',
+    background: '/models/yuehua/scene.sog',
     floors: [1, 2, 3, 4, 5].map((i) => `/models/yuehua/bldg/layer-${i}.sog`),
     roomUrl: '/models/yuehua/room.sog',
   });
@@ -159,8 +159,9 @@ export async function bootPc() {
     };
 
     // 唯一的镜头时间轴：所有目标点都由 PUSH / PLATE 推导，保证和盘子一致
-    const camA = { t: 1.0, target: [cx, midY + 14, cz] as [number, number, number], distance: 600, yaw: 0.95, pitch: 0.22, fov: 46 };
-    const camB = { t: 2.8, target: [cx, midY + 10, cz] as [number, number, number], distance: 590, yaw: 0.98, pitch: 0.2, fov: 46 };
+    // 第一拍：推进到目标楼前
+    const camA = { t: 1.2, target: [TOX, TOY - 2, TOZ] as [number, number, number], distance: 150, yaw: 0.95, pitch: 0.18, fov: 48 };
+    const camB = { t: 3.0, target: [TOX, TOY, TOZ] as [number, number, number], distance: 120, yaw: 1.0, pitch: 0.16, fov: 46 };
     // 抽屉终点：镜头最后一拍要贴近它，盒子才有「主角」的体量
     const endPos: [number, number, number] = [
       PLATE[0] + PUSH[0] * tune.pushDistance,
@@ -210,11 +211,12 @@ export async function bootPc() {
     document.body.classList.add('night-mode');
     sfx.whoosh(0.6);
 
-    // ② 拆分：压暗之后再分层
+    // ② 镜头推进到目标楼后：叠加独立模型并分层（大场景保持完整，不挖洞）
     window.setTimeout(() => {
+      engine.showFloors(true);
       engine.openUnfold(tune.unfoldSpread, tune.unfoldDuration, 3);
       sfx.whoosh(0.9);
-    }, 900);
+    }, 1000);
 
     // ① 拆分完：玻璃层在原地渐显（不位移）
     window.setTimeout(() => {

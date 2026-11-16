@@ -37,6 +37,11 @@ export class PcEngine {
   bgEntity: pc.Entity | null = null;
   private develop: DevelopEffect[] = [];
 
+  /** 显示/隐藏「特效楼层」（叠加在原始场景之上的独立模型） */
+  showFloors(on: boolean) {
+    for (const e of this.layerEntities) if (e) e.enabled = on;
+  }
+
   /** 诊断：各资产加载情况 */
   get loadReport() {
     return {
@@ -243,6 +248,7 @@ export class PcEngine {
         e.addComponent('gsplat', { asset, unified: false });   // unified:false 才拿得到 splat 材质，特效要用
         // 每层自己把 Z-up 数据扶正；父节点不再旋转，位移直接用世界轴
         e.setEulerAngles(-90, 0, 0);
+        e.enabled = false;          // 默认隐藏，特效开始时再显示
         this.root.addChild(e);
         this.layerEntities[index] = e;
         this.loaded++;
