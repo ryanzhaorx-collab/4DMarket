@@ -1745,3 +1745,36 @@ body.in-room .roomscene { display: block; }
 .tune-row em { font-style: normal; text-align: right; color: #f0d9a0; }
 .tune-row input[type='range'] { width: 100%; accent-color: #d9b876; }
 .tune-out { margin: 8px 0 0; font-size: 10px; color: rgba(237, 230, 214, 0.5); max-height: 120px; overflow: auto; }
+
+/* ============ 夜间态：拆分/推出时整体压暗（对齐图4） ============ */
+.nightveil {
+    position: absolute;
+    inset: 0;
+    background: #050a14;
+    mix-blend-mode: multiply;
+    opacity: 0;
+    pointer-events: none;
+    z-index: 12;
+    transition: opacity 0.9s ease;
+}
+body.night-mode .nightveil { opacity: 0.55; }
+
+/* 房间标签（图4 那个「270° 海景房」小牌） */
+.roomlabel {
+    position: absolute;
+    left: 50%;
+    bottom: 42%;
+    transform: translate(-50%, 10px);
+    padding: 10px 22px;
+    border-radius: 10px;
+    border: 1px solid rgba(120, 210, 255, 0.55);
+    background: rgba(6, 16, 26, 0.72);
+    color: #cdeaff;
+    font-size: 20px;
+    letter-spacing: 0.16em;
+    opacity: 0;
+    pointer-events: none;
+    z-index: 30;
+    transition: opacity 0.5s ease, transform 0.5s ease;
+}
+.roomlabel.show { opacity: 1; transform: translate(-50%, 0); }

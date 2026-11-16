@@ -206,9 +206,15 @@ export async function bootPc() {
       },
     );
 
-    // 分层展开与镜头同步开始，不再用 setTimeout 另起一条时间轴
-    engine.openUnfold(tune.unfoldSpread, tune.unfoldDuration, 3);
-    sfx.whoosh(0.8);
+    // ① 变背景：整体压暗成夜景（0.9s）
+    document.body.classList.add('night-mode');
+    sfx.whoosh(0.6);
+
+    // ② 拆分：压暗之后再分层
+    window.setTimeout(() => {
+      engine.openUnfold(tune.unfoldSpread, tune.unfoldDuration, 3);
+      sfx.whoosh(0.9);
+    }, 900);
 
     // ① 拆分完：玻璃层在原地渐显（不位移）
     window.setTimeout(() => {
@@ -274,7 +280,8 @@ export async function bootPc() {
     document.getElementById('detailPanel')?.classList.remove('open');
     document.getElementById('paypage')?.classList.remove('open');
     document.getElementById('orderVeil')?.classList.remove('show');
-    document.body.classList.remove('order-open');
+    document.getElementById('roomlabel')?.classList.remove('show');
+    document.body.classList.remove('order-open', 'night-mode');
     engine.exitRoomScene();
     engine.hideRoom(0);
     engine.closeSplit(700);

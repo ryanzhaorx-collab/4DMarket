@@ -24,6 +24,8 @@ export class OrbitControls {
   private velYaw = 0;
   private velPitch = 0;
   private moved = 0;
+  /** 当前是否处于平移（右键拖动）模式 */
+  private panning = false;
   private downAt = 0;
   private lastInput = 0;
   private lastTapAt = 0;
@@ -94,6 +96,8 @@ export class OrbitControls {
       /* 合成事件/已释放指针时会抛 NotFoundError，忽略即可 */
     }
     this.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    // 右键（或按住 Shift 的左键）进入平移模式
+    this.panning = e.button === 2 || e.shiftKey;
     if (this.pointers.size === 1) {
       this.last = { x: e.clientX, y: e.clientY };
       this.velYaw = 0;
@@ -129,6 +133,21 @@ export class OrbitControls {
     this.last = { x: e.clientX, y: e.clientY };
     this.moved += Math.abs(dx) + Math.abs(dy);
 
+    if (this.panning) {
+      // 平移：屏幕像素 → 世界距离（与相机距离成正比，远看时移动更快）
+      const scale = this.camera.distance * 0.0016;
+      const sinY = Math.sin(this.camera.yaw);
+      const cosY = Math.cos(this.camera.yaw);
+      // 相机右方向 = (cosY, 0, -sinY)，屏幕上方投影到地面 = (-sinY, 0, -cosY)
+      this.camera.target[0] -= cosY * dx * scale;
+      this.camera.target[2] += sinY * dx * scale;
+      this.camera.target[0] += sinY * dy * scale;
+      this.camera.target[2] += cosY * dy * scale;
+      this.targetYaw = this.camera.yaw;
+      this.targetPitch = this.camera.pitch;
+      return;
+    }
+
     const k = 0.0042;
     this.targetYaw -= dx * k;
     this.targetPitch = clamp(this.targetPitch + dy * k, MIN_PITCH, MAX_PITCH);
@@ -137,6 +156,7 @@ export class OrbitControls {
   };
 
   private onUp = (e: PointerEvent) => {
+    this.panning = false;
     const had = this.pointers.delete(e.pointerId);
     if (!had) return;
     if (this.pointers.size === 0) {
