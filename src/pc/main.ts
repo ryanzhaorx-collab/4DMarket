@@ -7,7 +7,8 @@ const btn = document.getElementById('go') as HTMLButtonElement;
 
 const engine = new PcEngine({
   canvas,
-  layers: ['/models/yuehua/main.sog'],
+  background: '/models/yuehua/scene-rest.sog',
+  floors: [1, 2, 3, 4, 5].map((i) => `/models/yuehua/bldg/layer-${i}.sog`),
 });
 
 void (async () => {

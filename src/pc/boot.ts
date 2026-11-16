@@ -45,7 +45,8 @@ export async function bootPc() {
 
   const engine = new PcEngine({
     canvas,
-    layers: ['/models/yuehua/main.sog'],
+    background: '/models/yuehua/scene-rest.sog',
+    floors: [1, 2, 3, 4, 5].map((i) => `/models/yuehua/bldg/layer-${i}.sog`),
     roomUrl: '/models/yuehua/room.sog',
   });
 
@@ -142,9 +143,10 @@ export async function bootPc() {
     document.body.classList.add('godview');
 
     // 目标楼层在「左塔」里：x 往左、z 往前的偏移，高度取中间那刀
-    const TOX = cx - 38;
-    const TOZ = cz - 14;
-    const TOY = midY + tune.pushStartY;
+    // 目标楼：用户在 ?pick=1 里取的坐标（x≈99, z≈-72），层高取中段
+    const TOX = 99;
+    const TOZ = -72;
+    const TOY = 30 + tune.pushStartY * 0.1;
     const yawNow = engine.camera.yaw;
     const PUSH: [number, number, number] = [Math.sin(yawNow), 0, Math.cos(yawNow)];
     const PLATE: [number, number, number] = [TOX, TOY, TOZ];

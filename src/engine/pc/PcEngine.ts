@@ -15,8 +15,10 @@ import type { Vec3 } from '../math';
 
 export type PcEngineOptions = {
   canvas: HTMLCanvasElement;
-  /** 由下到上的楼层资产（.sog），用于「千层糕」分层展开 */
-  layers: string[];
+  /** 背景整场模型（不参与拆分） */
+  background: string;
+  /** 目标楼的楼层资产（由下到上），只有这些参与「千层糕」拆分 */
+  floors: string[];
   /** 真实室内扫描（.sog），放在被抽出的楼层里 */
   roomUrl?: string;
 };
@@ -31,6 +33,8 @@ export class PcEngine {
   private camEntity: pc.Entity;
   private root: pc.Entity;
   private layerEntities: pc.Entity[] = [];
+  /** 背景模型实体（供调试/外部访问） */
+  bgEntity: pc.Entity | null = null;
   private develop: DevelopEffect[] = [];
 
   /** 已挂上显影特效的层数（入场特效的启动条件） */
@@ -201,6 +205,24 @@ export class PcEngine {
 
   private roomMode = false;
 
+  private loadBackground(url: string): Promise<void> {
+    return new Promise<void>((resolve) => {
+      const asset = new pc.Asset('bg', 'gsplat', { url });
+      this.app.assets.add(asset);
+      asset.on('load', () => {
+        const e = new pc.Entity('bg', this.app);
+        e.addComponent('gsplat', { asset, unified: false });
+        e.setEulerAngles(-90, 0, 0);
+        this.root.addChild(e);
+        this.bgEntity = e;
+        this.loaded++;
+        resolve();
+      });
+      asset.on('error', () => resolve());
+      this.app.assets.load(asset);
+    });
+  }
+
   private loadLayer(index: number, url: string): Promise<void> {
     return new Promise<void>((resolve) => {
       const key = `layer-${index}`;
@@ -229,13 +251,11 @@ export class PcEngine {
    * 之后在后台补中间层和上半部分——这是手机上「点开就能看」的关键。
    */
   async start(): Promise<void> {
-    const urls = this.opts.layers;
-    // 先加载「点数最多」的那层（通常是主体），再并行补其余
-    await this.loadLayer(0, urls[0]);
+    await this.loadBackground(this.opts.background);
     this.onFirstPaint?.();
     if (this.opts.roomUrl) this.loadInterior(this.opts.roomUrl);
-    const rest = urls.slice(1).map((u, i) => this.loadLayer(i + 1, u));
-    void Promise.all(rest).then(() => this.onFullLoad?.());
+    const floorJobs = this.opts.floors.map((u, i) => this.loadLayer(i, u));
+    void Promise.all(floorJobs).then(() => this.onFullLoad?.());
 
     // yuehua.ply 原始为 Z-up：世界 Y = 模型 Z（4.8~135），世界 Z = -模型 Y（-318~352）
     this.bounds = {
