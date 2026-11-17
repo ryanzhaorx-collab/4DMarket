@@ -108,7 +108,7 @@ export class PcEngine {
   constructor(opts: PcEngineOptions) {
     this.opts = opts;
     this.app = new pc.Application(opts.canvas, {
-      graphicsDeviceOptions: { antialias: false, alpha: false, powerPreference: 'high-performance' },
+      graphicsDeviceOptions: { antialias: false, alpha: true, powerPreference: 'high-performance' },
     });
     this.app.setCanvasFillMode(pc.FILLMODE_FILL_WINDOW);
     this.app.setCanvasResolution(pc.RESOLUTION_AUTO);
@@ -122,7 +122,7 @@ export class PcEngine {
     this.camEntity = new pc.Entity('camera', this.app);
     this.camEntity.addComponent('camera', {
       fov: 52, nearClip: 0.4, farClip: 6000,
-      clearColor: new pc.Color(0.76, 0.82, 0.86),
+      clearColor: new pc.Color(0, 0, 0, 0),
     });
     this.app.root.addChild(this.camEntity);
 
@@ -162,6 +162,15 @@ export class PcEngine {
       this.app.root.addChild(e);
       this.interiorEntity = e;
       if (this.roomMode) e.enabled = true;
+      // 用扫描的真实包围盒当玻璃框尺寸，保证「框=内容」
+      const aabb = (asset.resource as unknown as { aabb?: { halfExtents: pc.Vec3; center: pc.Vec3 } })?.aabb;
+      if (aabb) {
+        const h = aabb.halfExtents;
+        // 模型是 Z-up：宽=2hx，深=2hy，高=2hz
+        this.roomSize = { w: h.x * 2, d: h.y * 2, h: h.z * 2 };
+        this.interiorOffset = [aabb.center.x, aabb.center.y, aabb.center.z];
+        if (this.roomEntity) this.rebuildRoom();
+      }
     });
     asset.on('error', (err: unknown) => console.warn('[pc] 室内资产加载失败', err));
     this.app.assets.load(asset);
