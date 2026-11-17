@@ -62,6 +62,7 @@ export async function bootPc() {
   // 调参面板（?tune=1）：所有动画数值都从这里读
   const tune: TuneParams = loadTune();
   engine.roomSize = { w: tune.boxW, d: tune.boxD, h: tune.boxH };
+  engine.interiorYaw = tune.glassYaw;
   if (new URLSearchParams(location.search).get('tune') === '1') {
     mountTune(
       tune,
@@ -74,6 +75,7 @@ export async function bootPc() {
       (p) => {
         // 尺寸变化即时重建玻璃盒
         engine.roomSize = { w: p.boxW, d: p.boxD, h: p.boxH };
+        engine.setRoomYaw(p.glassYaw);
         engine.rebuildRoom();
       },
     );
@@ -209,11 +211,35 @@ export async function bootPc() {
   const enterRoom = () => {
     if (busy || !drawerOpen || inRoom) return;
     busy = true;
-    flash.classList.remove('run');
-    void flash.offsetWidth;
-    flash.classList.add('run');
-    stage.classList.add('switching');
-    sfx.whoosh(0.7);
+
+    // ① 先推近：镜头朝房间俯冲一小段（0.55s），给「进去」一个动势
+    const cam = engine.camera;
+    const aim = engine.roomPose.pos;
+    engine.playTimeline(
+      [
+        { t: 0, target: [...cam.target] as [number, number, number], distance: cam.distance, yaw: cam.yaw, pitch: cam.pitch, fov: cam.fov },
+        {
+          t: 0.55,
+          target: [aim[0], aim[1], aim[2]],
+          distance: Math.max(9, cam.distance * 0.42),
+          yaw: cam.yaw,
+          pitch: cam.pitch - 0.04,
+          fov: cam.fov + 6,
+          ease: 'inOutCubic',
+        },
+      ],
+    );
+    sfx.whoosh(0.9);
+
+    // ② 推近完成后再白闪过场切页
+    window.setTimeout(() => {
+      flash.classList.remove('run');
+      void flash.offsetWidth;
+      flash.classList.add('run');
+      stage.classList.add('switching');
+      sfx.whoosh(0.7);
+    }, 480);
+
     window.setTimeout(() => {
       engine.hideRoom(0);
       // 第二页换成团队的 SplatViewer（自带显影特效 + 手势 + 自动取景）

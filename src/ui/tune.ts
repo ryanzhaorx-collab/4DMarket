@@ -28,6 +28,8 @@ export type TuneParams = {
   boxD: number;
   /** 玻璃盒尺寸：高（米） */
   boxH: number;
+  /** 玻璃墙朝向（度，绕竖直轴） */
+  glassYaw: number;
 };
 
 export const DEFAULT_TUNE: TuneParams = {
@@ -43,6 +45,7 @@ export const DEFAULT_TUNE: TuneParams = {
   boxW: 7,
   boxD: 6,
   boxH: 3.2,
+  glassYaw: 180,
 };
 
 const KEY = 'dsh.tune.v1';
@@ -80,6 +83,7 @@ const FIELDS: Field[] = [
   { key: 'boxW', label: '玻璃盒 宽', min: 2, max: 60, step: 0.5, unit: 'm' },
   { key: 'boxD', label: '玻璃盒 深', min: 2, max: 60, step: 0.5, unit: 'm' },
   { key: 'boxH', label: '玻璃盒 高', min: 1, max: 30, step: 0.2, unit: 'm' },
+  { key: 'glassYaw', label: '玻璃墙朝向', min: 0, max: 360, step: 5, unit: '°' },
 ];
 
 /** 挂载调参面板，返回当前参数对象（外部随时读取） */

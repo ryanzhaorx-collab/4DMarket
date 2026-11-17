@@ -176,7 +176,8 @@ export class PcEngine {
         const a = (this.interiorYaw * Math.PI) / 180;
         const mx = c.x * Math.cos(a) - c.y * Math.sin(a);
         const my = c.x * Math.sin(a) + c.y * Math.cos(a);
-        this.interiorOffset = [mx, c.z, -my];   // world = (x, z, -y)
+        this.interiorOffset = [mx, c.z, -my];
+        this.interiorModelCenter = [c.x, c.y, c.z];   // world = (x, z, -y)
         e.setEulerAngles(-90, 0, this.interiorYaw);
         if (this.roomEntity) this.rebuildRoom();
       }
@@ -219,6 +220,24 @@ export class PcEngine {
     this.roomMode = true;
   }
 
+  /** 设置玻璃墙/扫描的朝向（度，绕竖直轴），墙与内容一起转 */
+  setRoomYaw(deg: number) {
+    this.interiorYaw = deg;
+    if (this.interiorEntity) {
+      this.interiorEntity.setEulerAngles(-90, 0, deg);
+      // 中心偏移随朝向重算
+      const a = (deg * Math.PI) / 180;
+      const c = this.interiorModelCenter;
+      const mx = c[0] * Math.cos(a) - c[1] * Math.sin(a);
+      const my = c[0] * Math.sin(a) + c[1] * Math.cos(a);
+      this.interiorOffset = [mx, c[2], -my];
+    }
+    if (this.roomEntity) this.roomEntity.setEulerAngles(0, deg, 0);
+  }
+
+  /** 扫描在模型坐标系里的中心（用于随朝向重算偏移） */
+  private interiorModelCenter: [number, number, number] = [0, 0, 0];
+
   /** 改尺寸后重建玻璃盒（调试面板用） */
   rebuildRoom() {
     const old = this.roomEntity;
@@ -230,6 +249,7 @@ export class PcEngine {
     const fresh = this.ensureRoom();
     if (fresh) {
       fresh.enabled = true;
+      fresh.setEulerAngles(0, this.interiorYaw, 0);
       fresh.setPosition(this.roomPos[0], this.roomPos[1], this.roomPos[2]);
     }
   }
