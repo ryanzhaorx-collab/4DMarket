@@ -10,6 +10,7 @@ import { OrbitCamera } from '../Camera';
 import { OrbitControls } from '../OrbitControls';
 import { CameraTimeline, type CameraKey } from '../CameraTimeline';
 import { DevelopEffect } from './DevelopEffect';
+import { applyCutFade } from './CutFade';
 import { MeshBuilder } from '../VirtualRoom';
 import type { Vec3 } from '../math';
 
@@ -268,6 +269,13 @@ export class PcEngine {
         this.root.addChild(e);
         this.layerEntities[index] = e;
         this.loaded++;
+        // 切面收边：用这层自己的包围盒，把上下边界各 fade 0.35m
+        const bb = (asset.resource as unknown as { aabb?: { center: { z: number }; halfExtents: { z: number } } })?.aabb;
+        if (bb) {
+          const lo = bb.center.z - bb.halfExtents.z;
+          const hi = bb.center.z + bb.halfExtents.z;
+          applyCutFade(e as never, lo, hi, Math.min(0.5, (hi - lo) * 0.12));
+        }
         // 挂「冲洗显影」特效（与参考实现同一套着色器）
         // 材质的 instance 要等首帧渲染后才创建，先排队
         this.pendingDevelop.push({ e, res: asset.resource });
