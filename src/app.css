@@ -1803,3 +1803,15 @@ body.night-mode .starfield { opacity: 1; }
 
 /* 原来那层「整体压暗」撤掉：改成只压环境，不压 UI */
 body.night-mode .nightveil { opacity: 0; }
+
+/* 场景切换用的暗场：盖住「大场景撤掉 → 楼层出现」这一下 */
+.swapveil {
+    position: absolute;
+    inset: 0;
+    z-index: 18;
+    background: #04070d;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.5s ease;
+}
+.swapveil.on { opacity: 0.92; }

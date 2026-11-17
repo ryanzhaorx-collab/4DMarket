@@ -62,7 +62,7 @@ export async function bootPc() {
   // 调参面板（?tune=1）：所有动画数值都从这里读
   const tune: TuneParams = loadTune();
   engine.roomSize = { w: tune.boxW, d: tune.boxD, h: tune.boxH };
-  engine.interiorYaw = tune.glassYaw;
+  engine.setRoomYaw(tune.glassYaw);
   if (new URLSearchParams(location.search).get('tune') === '1') {
     mountTune(
       tune,
@@ -187,17 +187,25 @@ export async function bootPc() {
       },
     );
 
-    // ① 变背景：整体压暗成夜景（0.9s）
+    // ① 环境变化：星空淡入（不压 UI）
     document.body.classList.add('night-mode');
     sfx.whoosh(0.6);
 
-    // ② 大场景撤掉，只留特效模型
+    // ② 镜头推入的同时暗场升起，把「撤大场景 / 换楼层」这一下盖住
+    const veil = document.getElementById('swapveil');
+    window.setTimeout(() => veil?.classList.add('on'), 420);
+
     window.setTimeout(() => {
       engine.setBackgroundVisible(false);
       engine.showFloors(true);
+    }, 900);
+
+    // ③ 暗场回落，楼层开始分层（观众看到的是「推近 → 变暗 → 楼已经分开了」）
+    window.setTimeout(() => {
+      veil?.classList.remove('on');
       engine.openUnfold(tune.unfoldSpread, tune.unfoldDuration, 3);
       sfx.whoosh(0.9);
-    }, 900);
+    }, 1250);
 
 
     // ② 渐显后：沿 PUSH 朝镜头平推

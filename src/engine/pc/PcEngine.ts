@@ -69,8 +69,10 @@ export class PcEngine {
   private interiorEntity: pc.Entity | null = null;
   /** 室内扫描的朝向/缩放，先用参数试，定了再写死 */
   interiorRot: [number, number, number] = [-90, 0, 0];
-  /** 绕模型自身竖直轴的朝向（度）。180 = 把窗那面转向镜头 */
+  /** 模型自身朝向（度，绕模型竖直轴）——固定不动 */
   interiorYaw = 180;
+  /** 玻璃墙朝向（度，绕世界竖直轴）——只影响墙 */
+  glassYaw = 0;
   interiorScale = 1;   // 缩放已烘进资产，这里保持 1
   /** 扫描模型的中心偏移（标定用，单位与扫描一致） */
   interiorOffset: [number, number, number] = [1.35, 1.95, 0.5];   // 扫描包围盒中心，用于居中
@@ -176,8 +178,7 @@ export class PcEngine {
         const a = (this.interiorYaw * Math.PI) / 180;
         const mx = c.x * Math.cos(a) - c.y * Math.sin(a);
         const my = c.x * Math.sin(a) + c.y * Math.cos(a);
-        this.interiorOffset = [mx, c.z, -my];
-        this.interiorModelCenter = [c.x, c.y, c.z];   // world = (x, z, -y)
+        this.interiorOffset = [mx, c.z, -my];   // world = (x, z, -y)
         e.setEulerAngles(-90, 0, this.interiorYaw);
         if (this.roomEntity) this.rebuildRoom();
       }
@@ -220,23 +221,11 @@ export class PcEngine {
     this.roomMode = true;
   }
 
-  /** 设置玻璃墙/扫描的朝向（度，绕竖直轴），墙与内容一起转 */
+  /** 只转玻璃墙（模型朝向保持不动） */
   setRoomYaw(deg: number) {
-    this.interiorYaw = deg;
-    if (this.interiorEntity) {
-      this.interiorEntity.setEulerAngles(-90, 0, deg);
-      // 中心偏移随朝向重算
-      const a = (deg * Math.PI) / 180;
-      const c = this.interiorModelCenter;
-      const mx = c[0] * Math.cos(a) - c[1] * Math.sin(a);
-      const my = c[0] * Math.sin(a) + c[1] * Math.cos(a);
-      this.interiorOffset = [mx, c[2], -my];
-    }
+    this.glassYaw = deg;
     if (this.roomEntity) this.roomEntity.setEulerAngles(0, deg, 0);
   }
-
-  /** 扫描在模型坐标系里的中心（用于随朝向重算偏移） */
-  private interiorModelCenter: [number, number, number] = [0, 0, 0];
 
   /** 改尺寸后重建玻璃盒（调试面板用） */
   rebuildRoom() {
@@ -249,7 +238,7 @@ export class PcEngine {
     const fresh = this.ensureRoom();
     if (fresh) {
       fresh.enabled = true;
-      fresh.setEulerAngles(0, this.interiorYaw, 0);
+      fresh.setEulerAngles(0, this.glassYaw, 0);
       fresh.setPosition(this.roomPos[0], this.roomPos[1], this.roomPos[2]);
     }
   }
