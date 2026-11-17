@@ -448,23 +448,13 @@ export class PcEngine {
     const W = this.roomSize.w / 2;
     const D = this.roomSize.d / 2;
     const H = this.roomSize.h;
-    b.box([-W - 1, -0.9, -D - 1], [W + 1, 0, D + 1], [40, 38, 34]);
-    b.box([-W, 0, -D], [W, 0.08, D], [26, 24, 21]);
-    const trim: [number, number, number][] = [
-      [-W - 0.5, W + 0.5, -D - 0.5, -D],
-      [-W - 0.5, W + 0.5, D, D + 0.5],
-      [-W - 0.5, -W, -D, D],
-      [W, W + 0.5, -D, D],
-    ].map((v) => [v[0], v[1], v[2]] as [number, number, number]);
-    void trim;
-    b.box([-W - 0.5, H - 0.24, -D - 0.5], [W + 0.5, H, -D], [214, 178, 106]);
-    b.box([-W - 0.5, H - 0.24, D], [W + 0.5, H, D + 0.5], [214, 178, 106]);
-    b.box([-W - 0.5, H - 0.24, -D], [-W, H, D], [214, 178, 106]);
-    b.box([W, H - 0.24, -D], [W + 0.5, H, D], [214, 178, 106]);
-    // 四角立柱
-    for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
-      b.box([sx * W - 0.08, 0, sz * D - 0.08], [sx * W + 0.08, H, sz * D + 0.08], [214, 178, 106]);
-    }
+
+    // 只做一圈玻璃墙（四面薄板），不加地板/天花板/假家具
+    const t = 0.06;
+    b.box([-W, 0, -D], [W, H, -D + t], [150, 215, 255], 0.16);   // 后
+    b.box([-W, 0, D - t], [W, H, D], [150, 215, 255], 0.16);     // 前
+    b.box([-W, 0, -D], [-W + t, H, D], [150, 215, 255], 0.16);   // 左
+    b.box([W - t, 0, -D], [W, H, D], [150, 215, 255], 0.16);     // 右
 
     const mesh = new pc.Mesh(this.app.graphicsDevice);
     mesh.setPositions(new Float32Array(b.pos));
@@ -480,127 +470,91 @@ export class PcEngine {
     mesh.setIndices(new Uint32Array(b.idx));
     mesh.update(pc.PRIMITIVE_TRIANGLES);
 
-    const material = this.app.scene.defaultMaterial.clone();
-    material.diffuse = new pc.Color(1, 1, 1);
-    material.diffuseVertexColor = true;
-    material.blendType = pc.BLEND_NORMAL;
-    material.depthWrite = false;
-    material.diffuse = new pc.Color(0.35, 0.85, 1.0);   // 青色玻璃
-    material.opacity = 0.34;
-    material.update();
+    const glass = this.app.scene.defaultMaterial.clone();
+    glass.diffuse = new pc.Color(0.6, 0.9, 1);
+    glass.emissive = new pc.Color(0.25, 0.65, 0.95);
+    glass.emissiveIntensity = 0.9;
+    glass.opacity = 0.16;
+    glass.blendType = pc.BLEND_NORMAL;
+    glass.depthWrite = false;
+    glass.diffuseVertexColor = true;
+    glass.update();
 
-    // 边缘发光：金色轮廓线（爆炸图里那一圈高亮）
-    const edgeMat = this.app.scene.defaultMaterial.clone();
-    edgeMat.diffuse = new pc.Color(1, 1, 1);
-    edgeMat.diffuseVertexColor = true;
-    edgeMat.emissive = new pc.Color(0.45, 0.95, 1.0);   // 青色辉光
-    edgeMat.emissiveIntensity = 3.4;
-    edgeMat.opacity = 0.85;
-    edgeMat.blendType = pc.BLEND_ADDITIVEALPHA;
-    edgeMat.depthWrite = false;
-    edgeMat.update();
-
-    const e = new pc.Entity('room', this.app);
-    e.addComponent('render', { type: 'asset' });
-    // 暖光内景：一张床 + 两盏灯（让玻璃盒里「有东西」）
-    const inner = new MeshBuilder();
-    // 尺寸必须小于玻璃盒（7 × 6 × 3.2m），否则会溢出来
-    inner.box([-1.5, 0.02, -1.1], [1.2, 0.55, 0.9], [232, 226, 212]);   // 床
-    inner.box([-1.6, 0.55, 0.7], [1.3, 1.25, 0.95], [150, 120, 92]);    // 床头板
-    inner.box([-0.5, 0.55, -0.3], [0.3, 0.72, 0.2], [250, 246, 238]);   // 枕头
-    inner.box([-0.4, 0.55, -0.1], [0.2, 0.72, 0.25], [170, 46, 40]);    // 红抱枕
-    inner.box([-0.5, 2.5, -0.5], [0.5, 2.9, 0.5], [255, 230, 170]);     // 顶灯
-    inner.box([2.6, 0.0, -2.0], [3.0, 1.4, -1.6], [255, 214, 150]);     // 落地灯
-    const innerMesh = new pc.Mesh(this.app.graphicsDevice);
-    innerMesh.setPositions(new Float32Array(inner.pos));
-    innerMesh.setNormals(new Float32Array(inner.nrm));
-    const innerCols = new Float32Array((inner.pos.length / 3) * 4);
-    for (let i = 0; i < inner.pos.length / 3; i++) {
-      innerCols[i * 4] = inner.col[i * 4] / 255;
-      innerCols[i * 4 + 1] = inner.col[i * 4 + 1] / 255;
-      innerCols[i * 4 + 2] = inner.col[i * 4 + 2] / 255;
-      innerCols[i * 4 + 3] = 1;
+    // 上下沿的霓虹框线（沿房间轮廓）
+    const frame = new MeshBuilder();
+    const T = 0.07;
+    const edge = (x0: number, y0: number, z0: number, x1: number, y1: number, z1: number) => {
+      frame.box(
+        [Math.min(x0, x1) - T / 2, Math.min(y0, y1) - T / 2, Math.min(z0, z1) - T / 2],
+        [Math.max(x0, x1) + T / 2, Math.max(y0, y1) + T / 2, Math.max(z0, z1) + T / 2],
+        [170, 235, 255],
+      );
+    };
+    for (const y of [0.02, H]) {
+      edge(-W, y, -D, W, y, -D);
+      edge(-W, y, D, W, y, D);
+      edge(-W, y, -D, -W, y, D);
+      edge(W, y, -D, W, y, D);
     }
-    innerMesh.setColors(innerCols as unknown as number[]);
-    innerMesh.setIndices(new Uint32Array(inner.idx));
-    innerMesh.update(pc.PRIMITIVE_TRIANGLES);
-    const innerMat = this.app.scene.defaultMaterial.clone();
-    innerMat.diffuse = new pc.Color(1, 1, 1);
-    innerMat.diffuseVertexColor = true;
-    innerMat.emissive = new pc.Color(0.95, 0.72, 0.42);  // 暖色内景
-    innerMat.emissiveIntensity = 1.4;
-    innerMat.update();
+    // 四角立线
+    for (const sx of [-1, 1]) for (const sz of [-1, 1]) edge(sx * W, 0, sz * D, sx * W, H, sz * D);
 
-    // 外发光壳：把同一 mesh 放大一点，用叠加混合做出「泛光」边缘
-    const halos: pc.MeshInstance[] = [];
-    for (const [scale, alpha] of [[1.03, 0.10], [1.07, 0.055], [1.12, 0.03]] as const) {
-      const m = this.app.scene.defaultMaterial.clone();
-      m.diffuse = new pc.Color(0.45, 0.95, 1);
-      m.emissive = new pc.Color(0.45, 0.95, 1);
-      m.emissiveIntensity = 1.6;
-      m.opacity = alpha;
-      m.blendType = pc.BLEND_ADDITIVEALPHA;
-      m.depthWrite = false;
-      m.cull = pc.CULLFACE_FRONT;   // 只画背面，形成包边
-      m.update();
-      const mi = new pc.MeshInstance(mesh, m);
-      mi.castShadow = false;
-      const ent = new pc.Entity(`halo-${scale}`, this.app);
-      ent.setLocalScale(scale, scale, scale);
-      ent.addComponent('render', { type: 'asset' });
-      ent.render!.meshInstances = [mi];
-      e.addChild(ent);
-      halos.push(mi);
+    const frameMesh = new pc.Mesh(this.app.graphicsDevice);
+    frameMesh.setPositions(new Float32Array(frame.pos));
+    frameMesh.setNormals(new Float32Array(frame.nrm));
+    const fcols = new Float32Array((frame.pos.length / 3) * 4);
+    for (let i = 0; i < frame.pos.length / 3; i++) {
+      fcols[i * 4] = frame.col[i * 4] / 255;
+      fcols[i * 4 + 1] = frame.col[i * 4 + 1] / 255;
+      fcols[i * 4 + 2] = frame.col[i * 4 + 2] / 255;
+      fcols[i * 4 + 3] = 1;
     }
+    frameMesh.setColors(fcols as unknown as number[]);
+    frameMesh.setIndices(new Uint32Array(frame.idx));
+    frameMesh.update(pc.PRIMITIVE_TRIANGLES);
+    const frameMat = this.app.scene.defaultMaterial.clone();
+    frameMat.diffuse = new pc.Color(0.7, 0.95, 1);
+    frameMat.emissive = new pc.Color(0.55, 0.95, 1);
+    frameMat.emissiveIntensity = 3.0;
+    frameMat.diffuseVertexColor = true;
+    frameMat.blendType = pc.BLEND_ADDITIVEALPHA;
+    frameMat.depthWrite = false;
+    frameMat.opacity = 0.95;
+    frameMat.update();
 
-    // —— 蓝图线稿装饰（虚线框 / 角标 / 地面网格 / 环绕光弧），跟随盒子一起动 ——
+    // 蓝图线稿（跟随盒子）
     const deco = this.buildBlueprint(this.roomSize.w, this.roomSize.d, this.roomSize.h);
     const decoMesh = new pc.Mesh(this.app.graphicsDevice);
     decoMesh.setPositions(new Float32Array(deco.pos));
     decoMesh.setNormals(new Float32Array(deco.nrm));
-    const decoCols = new Float32Array((deco.pos.length / 3) * 4);
+    const dcols = new Float32Array((deco.pos.length / 3) * 4);
     for (let i = 0; i < deco.pos.length / 3; i++) {
-      decoCols[i * 4] = deco.col[i * 4] / 255;
-      decoCols[i * 4 + 1] = deco.col[i * 4 + 1] / 255;
-      decoCols[i * 4 + 2] = deco.col[i * 4 + 2] / 255;
-      decoCols[i * 4 + 3] = 1;
+      dcols[i * 4] = deco.col[i * 4] / 255;
+      dcols[i * 4 + 1] = deco.col[i * 4 + 1] / 255;
+      dcols[i * 4 + 2] = deco.col[i * 4 + 2] / 255;
+      dcols[i * 4 + 3] = 1;
     }
-    decoMesh.setColors(decoCols as unknown as number[]);
+    decoMesh.setColors(dcols as unknown as number[]);
     decoMesh.setIndices(new Uint32Array(deco.idx));
     decoMesh.update(pc.PRIMITIVE_TRIANGLES);
     const decoMat = this.app.scene.defaultMaterial.clone();
-    decoMat.diffuse = new pc.Color(0.45, 0.9, 1);
-    decoMat.emissive = new pc.Color(0.45, 0.9, 1);
-    decoMat.emissiveIntensity = 2.6;
+    decoMat.emissive = new pc.Color(0.4, 0.85, 1);
+    decoMat.emissiveIntensity = 1.8;
     decoMat.diffuseVertexColor = true;
     decoMat.blendType = pc.BLEND_ADDITIVEALPHA;
     decoMat.depthWrite = false;
-    decoMat.opacity = 0.9;
+    decoMat.opacity = 0.55;
     decoMat.update();
+
+    const e = new pc.Entity('room', this.app);
+    e.addComponent('render', { type: 'asset' });
+    const miGlass = new pc.MeshInstance(mesh, glass);
+    const miFrame = new pc.MeshInstance(frameMesh, frameMat);
     const miDeco = new pc.MeshInstance(decoMesh, decoMat);
+    miGlass.castShadow = false;
+    miFrame.castShadow = false;
     miDeco.castShadow = false;
-
-    const mi = new pc.MeshInstance(mesh, material);
-    mi.castShadow = false;
-    const miEdge = new pc.MeshInstance(mesh, edgeMat);
-    miEdge.castShadow = false;
-    const miInner = new pc.MeshInstance(innerMesh, innerMat);
-    miInner.castShadow = false;
-    e.render!.meshInstances = [miInner, miEdge, miDeco];   // 暖光内景 + 青色边
-
-    // 盒内暖光：给玻璃盒一点「房间亮着灯」的氛围
-    const lamp = new pc.Entity('room-light', this.app);
-    lamp.addComponent('light', {
-      type: 'omni',
-      color: new pc.Color(1.0, 0.82, 0.55),
-      intensity: 1.6,
-      range: 26,
-      castShadows: false,
-    });
-    lamp.setLocalPosition(0, 2.2, 0);
-    e.addChild(lamp);
-    // 注意：MeshBuilder 的几何本身就是 Y-up（薄的方向是 Y），
-    // 这里绝对不能再绕 X 转 -90°，否则楼板会立起来。
+    e.render!.meshInstances = [miGlass, miFrame, miDeco];
     e.enabled = false;
     this.app.root.addChild(e);
     this.roomEntity = e;
@@ -636,8 +590,8 @@ export class PcEngine {
     };
 
     // ① 地面网格
-    const gw = Math.max(w, 12) * 2;
-    const gd = Math.max(d, 10) * 2;
+    const gw = Math.max(w, 6) * 1.35;
+    const gd = Math.max(d, 5) * 1.35;
     for (let x = -gw / 2; x <= gw / 2 + 0.01; x += 2) line(x, -0.02, -gd / 2, x, -0.02, gd / 2, dim);
     for (let z = -gd / 2; z <= gd / 2 + 0.01; z += 2) line(-gw / 2, -0.02, z, gw / 2, -0.02, z, dim);
 
@@ -661,7 +615,7 @@ export class PcEngine {
     }
 
     // ④ 环绕光弧（倾斜椭圆虚线）
-    const R = Math.max(hw, hd) * 1.9;
+    const R = Math.max(hw, hd) * 1.35;
     const seg = 96;
     for (let i = 0; i < seg; i++) {
       if (i % 3 === 0) continue;

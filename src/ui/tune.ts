@@ -33,7 +33,7 @@ export type TuneParams = {
 export const DEFAULT_TUNE: TuneParams = {
   unfoldSpread: 7,
   unfoldDuration: 1800,
-  pushDistance: 92,
+  pushDistance: 16,   // 只要从楼里出来一点，不要太远
   pushDuration: 2400,
   pushStartY: 8,
   developDuration: 4200,

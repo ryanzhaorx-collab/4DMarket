@@ -146,7 +146,7 @@ export async function bootPc() {
     // 目标楼：用户在 ?pick=1 里取的坐标（x≈99, z≈-72），层高取中段
     const TOX = 99;
     const TOZ = -72;
-    const TOY = 30 + tune.pushStartY * 0.1;
+    const TOY = 30 + tune.pushStartY;
     const yawNow = engine.camera.yaw;
     const PUSH: [number, number, number] = [Math.sin(yawNow), 0, Math.cos(yawNow)];
     const PLATE: [number, number, number] = [TOX, TOY, TOZ];
