@@ -84,6 +84,7 @@ export default defineConfig({
       input: {
         main: 'index.html',
         pc: 'pc.html',
+        room: 'room.html',
       },
       output: {
         manualChunks: undefined,

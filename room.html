@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+    <title>室内模型 · 单测</title>
+    <style>
+      html, body { margin: 0; height: 100%; background: #05080e; overflow: hidden; }
+      #rc { width: 100vw; height: 100vh; display: block; touch-action: none; }
+      #info {
+        position: fixed; left: 12px; top: 12px; z-index: 10; white-space: pre;
+        font: 12px/1.6 -apple-system, sans-serif; color: #9fe0ff;
+        background: rgba(6, 12, 20, 0.82); padding: 10px 14px; border-radius: 10px;
+        border: 1px solid rgba(120, 210, 255, 0.35);
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="rc"></canvas>
+    <div id="info">加载中…</div>
+    <script type="module" src="/src/room/main.ts"></script>
+  </body>
+</html>
