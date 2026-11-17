@@ -159,45 +159,23 @@ export async function bootPc() {
     };
 
     // 唯一的镜头时间轴：所有目标点都由 PUSH / PLATE 推导，保证和盘子一致
-    // 第一拍：推进到目标楼前
-    const camA = { t: 1.2, target: [TOX, TOY - 2, TOZ] as [number, number, number], distance: 150, yaw: 0.95, pitch: 0.18, fov: 48 };
-    const camB = { t: 3.0, target: [TOX, TOY, TOZ] as [number, number, number], distance: 120, yaw: 1.0, pitch: 0.16, fov: 46 };
-    // 抽屉终点：镜头最后一拍要贴近它，盒子才有「主角」的体量
-    const endPos: [number, number, number] = [
-      PLATE[0] + PUSH[0] * tune.pushDistance,
-      PLATE[1],
-      PLATE[2] + PUSH[2] * tune.pushDistance,
-    ];
-    const camC = { t: 4.0, target: [cx, midY + 6, cz] as [number, number, number], distance: 470, yaw: 1.0, pitch: 0.18, fov: 46 };
-    // 最后一拍：相机站在「盒子背离楼体的一侧」，这样盒子在前、塔楼在后
-    const awayX = endPos[0] - cx;
-    const awayZ = endPos[2] - cz;
-    const awayLen = Math.hypot(awayX, awayZ) || 1;
-    const eye: [number, number, number] = [
-      endPos[0] + (awayX / awayLen) * 62,
-      endPos[1] + 16,
-      endPos[2] + (awayZ / awayLen) * 62,
-    ];
-    const look: [number, number, number] = [endPos[0], endPos[1] + 1.5, endPos[2]];
-    const dx = eye[0] - look[0];
-    const dy = eye[1] - look[1];
-    const dz = eye[2] - look[2];
-    const camD = {
-      t: 6.4,
-      target: look,
-      distance: Math.hypot(dx, dy, dz),
-      yaw: Math.atan2(dx, dz),
-      pitch: Math.asin(dy / Math.hypot(dx, dy, dz)),
-      fov: 44,
+    // 镜头只跳一次：从当前机位切到目标楼正前方，之后完全不动
+    const camIn = {
+      t: 1.2,
+      target: [TOX, TOY, TOZ] as [number, number, number],
+      distance: 130,
+      yaw: 0.98,
+      pitch: 0.16,
+      fov: 46,
+      ease: 'inOutCubic' as const,
     };
+    const camStay = { ...camIn, t: 6.5, ease: 'linear' as const };
 
     engine.playTimeline(
       [
         { t: 0, ...cam0 },
-        { ...camA, ease: 'inOutCubic' },
-        { ...camB, ease: 'inOutCubic' },
-        { ...camC, ease: 'inOutCubic' },
-        { ...camD, ease: 'inOutCubic' },
+        camIn,
+        camStay,
       ],
       () => {
         drawerOpen = true;
@@ -219,10 +197,6 @@ export async function bootPc() {
       sfx.whoosh(0.9);
     }, 900);
 
-    // ① 拆分完：玻璃层在原地渐显（不位移）
-    window.setTimeout(() => {
-      engine.showRoom(PLATE, [0, 0, 0], 0, 700, 'linear');
-    }, 2500);
 
     // ② 渐显后：沿 PUSH 朝镜头平推
     window.setTimeout(() => {

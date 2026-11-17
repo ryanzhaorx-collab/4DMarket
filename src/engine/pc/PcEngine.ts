@@ -170,6 +170,7 @@ export class PcEngine {
         // 模型是 Z-up：宽=2hx，深=2hy，高=2hz
         this.roomSize = { w: h.x * 2, d: h.y * 2, h: h.z * 2 };
         this.interiorOffset = [aabb.center.x, aabb.center.y, aabb.center.z];
+        // 扫描中心同时是玻璃墙中心（墙在 buildRoomMesh 里以 0 为原点上下各半）
         if (this.roomEntity) this.rebuildRoom();
       }
     });
@@ -448,13 +449,15 @@ export class PcEngine {
     const W = this.roomSize.w / 2;
     const D = this.roomSize.d / 2;
     const H = this.roomSize.h;
+    const t = 0.05;                       // 玻璃厚度
+    // 以扫描中心为原点：上下各占一半，保证墙和内容同心
+    const y0 = -H / 2;
+    const y1 = H / 2;
 
-    // 只做一圈玻璃墙（四面薄板），不加地板/天花板/假家具
-    const t = 0.06;
-    b.box([-W, 0, -D], [W, H, -D + t], [150, 215, 255], 0.16);   // 后
-    b.box([-W, 0, D - t], [W, H, D], [150, 215, 255], 0.16);     // 前
-    b.box([-W, 0, -D], [-W + t, H, D], [150, 215, 255], 0.16);   // 左
-    b.box([W - t, 0, -D], [W, H, D], [150, 215, 255], 0.16);     // 右
+    b.box([-W, y0, -D], [W, y1, -D + t], [170, 225, 255], 0.12);
+    b.box([-W, y0, D - t], [W, y1, D], [170, 225, 255], 0.12);
+    b.box([-W, y0, -D], [-W + t, y1, D], [170, 225, 255], 0.12);
+    b.box([W - t, y0, -D], [W, y1, D], [170, 225, 255], 0.12);
 
     const mesh = new pc.Mesh(this.app.graphicsDevice);
     mesh.setPositions(new Float32Array(b.pos));
@@ -471,162 +474,24 @@ export class PcEngine {
     mesh.update(pc.PRIMITIVE_TRIANGLES);
 
     const glass = this.app.scene.defaultMaterial.clone();
-    glass.diffuse = new pc.Color(0.6, 0.9, 1);
-    glass.emissive = new pc.Color(0.25, 0.65, 0.95);
-    glass.emissiveIntensity = 0.9;
-    glass.opacity = 0.16;
+    glass.diffuse = new pc.Color(0.62, 0.9, 1);
+    glass.emissive = new pc.Color(0.2, 0.6, 0.9);
+    glass.emissiveIntensity = 0.5;
+    glass.opacity = 0.1;
     glass.blendType = pc.BLEND_NORMAL;
     glass.depthWrite = false;
     glass.diffuseVertexColor = true;
+    glass.cull = pc.CULLFACE_NONE;
     glass.update();
-
-    // 上下沿的霓虹框线（沿房间轮廓）
-    const frame = new MeshBuilder();
-    const T = 0.07;
-    const edge = (x0: number, y0: number, z0: number, x1: number, y1: number, z1: number) => {
-      frame.box(
-        [Math.min(x0, x1) - T / 2, Math.min(y0, y1) - T / 2, Math.min(z0, z1) - T / 2],
-        [Math.max(x0, x1) + T / 2, Math.max(y0, y1) + T / 2, Math.max(z0, z1) + T / 2],
-        [170, 235, 255],
-      );
-    };
-    for (const y of [0.02, H]) {
-      edge(-W, y, -D, W, y, -D);
-      edge(-W, y, D, W, y, D);
-      edge(-W, y, -D, -W, y, D);
-      edge(W, y, -D, W, y, D);
-    }
-    // 四角立线
-    for (const sx of [-1, 1]) for (const sz of [-1, 1]) edge(sx * W, 0, sz * D, sx * W, H, sz * D);
-
-    const frameMesh = new pc.Mesh(this.app.graphicsDevice);
-    frameMesh.setPositions(new Float32Array(frame.pos));
-    frameMesh.setNormals(new Float32Array(frame.nrm));
-    const fcols = new Float32Array((frame.pos.length / 3) * 4);
-    for (let i = 0; i < frame.pos.length / 3; i++) {
-      fcols[i * 4] = frame.col[i * 4] / 255;
-      fcols[i * 4 + 1] = frame.col[i * 4 + 1] / 255;
-      fcols[i * 4 + 2] = frame.col[i * 4 + 2] / 255;
-      fcols[i * 4 + 3] = 1;
-    }
-    frameMesh.setColors(fcols as unknown as number[]);
-    frameMesh.setIndices(new Uint32Array(frame.idx));
-    frameMesh.update(pc.PRIMITIVE_TRIANGLES);
-    const frameMat = this.app.scene.defaultMaterial.clone();
-    frameMat.diffuse = new pc.Color(0.7, 0.95, 1);
-    frameMat.emissive = new pc.Color(0.55, 0.95, 1);
-    frameMat.emissiveIntensity = 3.0;
-    frameMat.diffuseVertexColor = true;
-    frameMat.blendType = pc.BLEND_ADDITIVEALPHA;
-    frameMat.depthWrite = false;
-    frameMat.opacity = 0.95;
-    frameMat.update();
-
-    // 蓝图线稿（跟随盒子）
-    const deco = this.buildBlueprint(this.roomSize.w, this.roomSize.d, this.roomSize.h);
-    const decoMesh = new pc.Mesh(this.app.graphicsDevice);
-    decoMesh.setPositions(new Float32Array(deco.pos));
-    decoMesh.setNormals(new Float32Array(deco.nrm));
-    const dcols = new Float32Array((deco.pos.length / 3) * 4);
-    for (let i = 0; i < deco.pos.length / 3; i++) {
-      dcols[i * 4] = deco.col[i * 4] / 255;
-      dcols[i * 4 + 1] = deco.col[i * 4 + 1] / 255;
-      dcols[i * 4 + 2] = deco.col[i * 4 + 2] / 255;
-      dcols[i * 4 + 3] = 1;
-    }
-    decoMesh.setColors(dcols as unknown as number[]);
-    decoMesh.setIndices(new Uint32Array(deco.idx));
-    decoMesh.update(pc.PRIMITIVE_TRIANGLES);
-    const decoMat = this.app.scene.defaultMaterial.clone();
-    decoMat.emissive = new pc.Color(0.4, 0.85, 1);
-    decoMat.emissiveIntensity = 1.8;
-    decoMat.diffuseVertexColor = true;
-    decoMat.blendType = pc.BLEND_ADDITIVEALPHA;
-    decoMat.depthWrite = false;
-    decoMat.opacity = 0.55;
-    decoMat.update();
 
     const e = new pc.Entity('room', this.app);
     e.addComponent('render', { type: 'asset' });
     const miGlass = new pc.MeshInstance(mesh, glass);
-    const miFrame = new pc.MeshInstance(frameMesh, frameMat);
-    const miDeco = new pc.MeshInstance(decoMesh, decoMat);
     miGlass.castShadow = false;
-    miFrame.castShadow = false;
-    miDeco.castShadow = false;
-    e.render!.meshInstances = [miGlass, miFrame, miDeco];
+    e.render!.meshInstances = [miGlass];
     e.enabled = false;
     this.app.root.addChild(e);
     this.roomEntity = e;
-  }
-
-  /**
-   * 蓝图线稿装饰：用细长方块拼出线（虚线、角标、地面网格、环绕光弧）。
-   * 全部挂在房间实体下，跟着盒子一起推出去。
-   */
-  private buildBlueprint(w: number, d: number, h: number) {
-    const b = new MeshBuilder();
-    const T = 0.04;
-    const cyan: [number, number, number] = [110, 225, 255];
-    const dim: [number, number, number] = [60, 130, 170];
-
-    const line = (x0: number, y0: number, z0: number, x1: number, y1: number, z1: number, c = cyan) => {
-      const half = T / 2;
-      b.box(
-        [Math.min(x0, x1) - half, Math.min(y0, y1) - half, Math.min(z0, z1) - half],
-        [Math.max(x0, x1) + half, Math.max(y0, y1) + half, Math.max(z0, z1) + half],
-        c,
-      );
-    };
-    const dash = (x0: number, y0: number, z0: number, x1: number, y1: number, z1: number, n = 28, c = cyan) => {
-      for (let i = 0; i < n; i += 2) {
-        const t0 = i / n;
-        const t1 = (i + 1) / n;
-        line(
-          x0 + (x1 - x0) * t0, y0 + (y1 - y0) * t0, z0 + (z1 - z0) * t0,
-          x0 + (x1 - x0) * t1, y0 + (y1 - y0) * t1, z0 + (z1 - z0) * t1, c,
-        );
-      }
-    };
-
-    // ① 地面网格
-    const gw = Math.max(w, 6) * 1.35;
-    const gd = Math.max(d, 5) * 1.35;
-    for (let x = -gw / 2; x <= gw / 2 + 0.01; x += 2) line(x, -0.02, -gd / 2, x, -0.02, gd / 2, dim);
-    for (let z = -gd / 2; z <= gd / 2 + 0.01; z += 2) line(-gw / 2, -0.02, z, gw / 2, -0.02, z, dim);
-
-    // ② 顶/底虚线框
-    const hw = w / 2;
-    const hd = d / 2;
-    dash(-hw, h, -hd, hw, h, -hd);
-    dash(-hw, h, hd, hw, h, hd);
-    dash(-hw, h, -hd, -hw, h, hd);
-    dash(hw, h, -hd, hw, h, hd);
-    dash(-hw, 0.02, -hd, hw, 0.02, -hd, 20, dim);
-    dash(-hw, 0.02, hd, hw, 0.02, hd, 20, dim);
-
-    // ③ 四角竖向角标
-    const L = Math.min(1.6, h * 0.5);
-    for (const sx of [-1, 1]) {
-      for (const sz of [-1, 1]) {
-        line(sx * hw, 0, sz * hd, sx * hw, L, sz * hd);
-        line(sx * hw, h, sz * hd, sx * hw, h - L, sz * hd);
-      }
-    }
-
-    // ④ 环绕光弧（倾斜椭圆虚线）
-    const R = Math.max(hw, hd) * 1.35;
-    const seg = 96;
-    for (let i = 0; i < seg; i++) {
-      if (i % 3 === 0) continue;
-      const a0 = (i / seg) * Math.PI * 2;
-      const a1 = ((i + 1) / seg) * Math.PI * 2;
-      const y0 = h * 0.5 + Math.sin(a0 * 2) * 0.6;
-      const y1 = h * 0.5 + Math.sin(a1 * 2) * 0.6;
-      line(Math.cos(a0) * R, y0, Math.sin(a0) * R * 0.72, Math.cos(a1) * R, y1, Math.sin(a1) * R * 0.72);
-    }
-
-    return b;
   }
 
   showRoom(anchor: Vec3, dir: Vec3, dist: number, duration = 1400, ease = 'outBack') {
