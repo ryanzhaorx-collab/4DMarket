@@ -69,6 +69,8 @@ export class PcEngine {
   private interiorEntity: pc.Entity | null = null;
   /** 室内扫描的朝向/缩放，先用参数试，定了再写死 */
   interiorRot: [number, number, number] = [-90, 0, 0];
+  /** 绕模型自身竖直轴的朝向（度）。180 = 把窗那面转向镜头 */
+  interiorYaw = 180;
   interiorScale = 1;   // 缩放已烘进资产，这里保持 1
   /** 扫描模型的中心偏移（标定用，单位与扫描一致） */
   interiorOffset: [number, number, number] = [1.35, 1.95, 0.5];   // 扫描包围盒中心，用于居中
@@ -167,10 +169,15 @@ export class PcEngine {
       const aabb = (asset.resource as unknown as { aabb?: { halfExtents: pc.Vec3; center: pc.Vec3 } })?.aabb;
       if (aabb) {
         const h = aabb.halfExtents;
-        // 模型是 Z-up：宽=2hx，深=2hy，高=2hz
+        const c = aabb.center;
+        // 模型 Z-up：宽=2hx，深=2hy，高=2hz
         this.roomSize = { w: h.x * 2, d: h.y * 2, h: h.z * 2 };
-        this.interiorOffset = [aabb.center.x, aabb.center.y, aabb.center.z];
-        // 扫描中心同时是玻璃墙中心（墙在 buildRoomMesh 里以 0 为原点上下各半）
+        // 把「模型坐标的中心」换算成世界坐标：先绕竖直轴 yaw，再 Rx(-90) 立起来
+        const a = (this.interiorYaw * Math.PI) / 180;
+        const mx = c.x * Math.cos(a) - c.y * Math.sin(a);
+        const my = c.x * Math.sin(a) + c.y * Math.cos(a);
+        this.interiorOffset = [mx, c.z, -my];   // world = (x, z, -y)
+        e.setEulerAngles(-90, 0, this.interiorYaw);
         if (this.roomEntity) this.rebuildRoom();
       }
     });

@@ -9,7 +9,7 @@ import { SplatViewer } from '../engine/pc/viewer/splat-viewer.js';
 
 const q = new URLSearchParams(location.search);
 const url = q.get('url') ?? '/models/yuehua/room.sog';
-const rot = (q.get('ir') ?? '-90,0,0').split(',').map(Number);
+const rot = (q.get('ir') ?? '-90,0,180').split(',').map(Number);   // 第三个数=绕竖直轴转
 const info = document.getElementById('info')!;
 const canvas = document.getElementById('rc') as HTMLCanvasElement;
 
